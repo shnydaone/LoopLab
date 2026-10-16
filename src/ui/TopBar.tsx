@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { engine } from '@/engine/engine';
-import { useLive } from '@/engine/live';
+import { useLive, type SoundMode } from '@/engine/live';
 import { COMPAT_INFO, type CompatMode } from '@/music/compat';
 import { MODE_LABEL, NOTE_NAMES } from '@/music/theory';
 import type { Mode } from '@/music/types';
@@ -160,6 +160,31 @@ function ProjectMenu() {
   );
 }
 
+function SoundSwitch() {
+  const mode = useLive((s) => s.soundMode);
+  const pending = useLive((s) => s.samplesPending);
+  const loaded = useLive((s) => s.samplesLoaded);
+  return (
+    <div className="tb-field sound-switch" title="A/B: recorded instruments vs the original synthesised sounds. Switches instantly while playing.">
+      <span>Sound</span>
+      <Segmented<SoundMode>
+        label="Sound engine"
+        value={mode}
+        onChange={(m) => engine.setSoundMode(m)}
+        options={[
+          { value: 'sampled', label: 'Sampled', title: 'Real recorded drums and bass (CC0 libraries)' },
+          { value: 'synth', label: 'Synth', title: 'Original all-synthesis sounds' },
+        ]}
+      />
+      {mode === 'sampled' && pending > 0 && (
+        <span className="loading-badge mono" aria-live="polite">
+          Loading {loaded}/{loaded + pending}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function ProjectName({ name, onRename }: { name: string; onRename: (n: string) => void }) {
   const [draft, setDraft] = useState<string | null>(null);
   const cancelled = useRef(false);
@@ -234,6 +259,7 @@ export function TopBar({ panels, onTogglePanel, focus, onToggleFocus, scale, onS
           Fill
         </button>
         <BpmControl />
+        <SoundSwitch />
       </div>
 
       {!compact && (

@@ -29,7 +29,7 @@ export const rootsReggae: GenrePack = {
       { deg: 3, bars: 2 },
     ],
   },
-  fills: ['rr-drums-fill'],
+  fills: ['rr-drums-fill', 'rr-drums-fill-timb'],
   patterns: [
     // ───────────── DRUMS ─────────────
     P({
@@ -135,6 +135,29 @@ export const rootsReggae: GenrePack = {
         hit('tomH', 14, 0.85),
         hit('tomM', 14 + 2 / 3, 0.85),
         hit('tomL', 15 + 1 / 3, 0.95),
+      ],
+    }),
+
+    P({
+      id: 'rr-drums-fill-timb',
+      name: 'Timbale Fill',
+      role: 'drums',
+      bars: 1,
+      swing: SW,
+      instrument: 'kit-roots',
+      energy: 3,
+      tags: ['fill', 'crash-after'],
+      description: 'The drop on 3, then a rolling timbale triplet run down to the low drum.',
+      hits: [
+        ...grid({ kick: '........X.......', rim: '........X.......', hatC: 'm.xgm.xgm.......' }),
+        hit('timbH', 10, 0.45),
+        hit('timbH', 11, 0.35),
+        hit('timbH', 12, 0.85),
+        hit('timbH', 12 + 2 / 3, 0.5),
+        hit('timbL', 13 + 1 / 3, 0.8),
+        hit('timbH', 14, 0.7),
+        hit('timbL', 14 + 2 / 3, 0.85),
+        hit('timbL', 15 + 1 / 3, 0.95),
       ],
     }),
 

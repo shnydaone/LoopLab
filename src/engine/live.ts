@@ -26,6 +26,20 @@ export interface LiveState {
   fillQueued: boolean;
   tracks: Record<string, LiveTrack>;
   error: string | null;
+  /** 'sampled' = recorded instruments where available, 'synth' = original synths (A/B). */
+  soundMode: SoundMode;
+  samplesPending: number;
+  samplesLoaded: number;
+}
+
+export type SoundMode = 'sampled' | 'synth';
+
+function initialSoundMode(): SoundMode {
+  try {
+    return localStorage.getItem('looplab:sound-mode') === '"synth"' ? 'synth' : 'sampled';
+  } catch {
+    return 'sampled';
+  }
 }
 
 export const liveStore = createStore<LiveState>(() => ({
@@ -37,6 +51,9 @@ export const liveStore = createStore<LiveState>(() => ({
   fillQueued: false,
   tracks: {},
   error: null,
+  soundMode: initialSoundMode(),
+  samplesPending: 0,
+  samplesLoaded: 0,
 }));
 
 export function useLive<T>(selector: (s: LiveState) => T): T {

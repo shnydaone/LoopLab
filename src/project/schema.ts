@@ -4,6 +4,7 @@
  * version. Add a migration step whenever SCHEMA_VERSION is bumped.
  */
 import { z } from 'zod';
+import { DRUM_VOICES } from '@/music/types';
 import type { Project } from './types';
 import { SCHEMA_VERSION } from './types';
 
@@ -16,9 +17,7 @@ const harmony = z.object({
   progression: z.array(chord).min(1).max(32),
 });
 
-const drumVoice = z.enum([
-  'kick', 'snare', 'rim', 'hatC', 'hatO', 'ride', 'tomH', 'tomM', 'tomL', 'crash', 'clap', 'shaker', 'tamb', 'handLo', 'handHi', 'cowbell', 'siren',
-]);
+const drumVoice = z.enum(DRUM_VOICES);
 
 const pattern = z.object({
   id: z.string().min(1).max(200),

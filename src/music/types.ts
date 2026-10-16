@@ -30,7 +30,19 @@ export type DrumVoice =
   | 'handLo'
   | 'handHi'
   | 'cowbell'
-  | 'siren';
+  | 'siren'
+  | 'hatP'
+  | 'timbH'
+  | 'timbL'
+  | 'claves'
+  | 'congaO'
+  | 'congaM'
+  | 'bongoL';
+
+export const DRUM_VOICES = [
+  'kick', 'snare', 'rim', 'hatC', 'hatO', 'hatP', 'ride', 'tomH', 'tomM', 'tomL', 'crash', 'clap', 'shaker', 'tamb',
+  'handLo', 'handHi', 'cowbell', 'siren', 'timbH', 'timbL', 'claves', 'congaO', 'congaM', 'bongoL',
+] as const satisfies readonly DrumVoice[];
 
 export interface DrumHit {
   t: number;

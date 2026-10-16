@@ -19,6 +19,17 @@ export interface KitConfig {
 
 type Trigger = (vel: number, time: number) => void;
 
+/** Synth stand-ins for voices that only exist in the sampled kits. */
+const SYNTH_ALIAS: Partial<Record<DrumVoice, DrumVoice>> = {
+  hatP: 'hatC',
+  timbH: 'tomH',
+  timbL: 'tomM',
+  claves: 'rim',
+  congaO: 'handHi',
+  congaM: 'handHi',
+  bongoL: 'handHi',
+};
+
 export class DrumKit implements Instrument {
   readonly output = new Tone.Gain(1);
   readonly mono = false;
@@ -260,8 +271,9 @@ export class DrumKit implements Instrument {
   }
 
   hit(voice: DrumVoice, velocity: number, time: number) {
-    const fn = this.voices.get(voice);
+    const fn = this.voices.get(voice) ?? this.voices.get(SYNTH_ALIAS[voice] ?? voice);
     if (!fn) return;
+    if (!this.voices.has(voice)) voice = SYNTH_ALIAS[voice] ?? voice;
     // Monophonic voices must not be retriggered at the exact same instant.
     const prev = this.last.get(voice) ?? -1;
     const t = time <= prev ? prev + 0.002 : time;

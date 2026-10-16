@@ -5,7 +5,8 @@ import { mod } from '@/music/theory';
 import type { DrumVoice, Pattern } from '@/music/types';
 
 const VOICE_ORDER: DrumVoice[] = [
-  'crash', 'ride', 'hatO', 'hatC', 'shaker', 'tamb', 'cowbell', 'clap', 'siren', 'tomH', 'tomM', 'tomL', 'handHi', 'snare', 'rim', 'handLo', 'kick',
+  'crash', 'ride', 'hatO', 'hatC', 'hatP', 'shaker', 'tamb', 'cowbell', 'claves', 'clap', 'siren', 'timbH', 'timbL', 'tomH', 'tomM', 'tomL',
+  'bongoL', 'handHi', 'congaM', 'congaO', 'snare', 'rim', 'handLo', 'kick',
 ];
 
 const PatternSvg = memo(function PatternSvg({ pattern, color }: { pattern: Pattern; color: string }) {

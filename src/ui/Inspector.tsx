@@ -19,6 +19,7 @@ export function Inspector() {
   const selectedId = useStore((s) => s.selectedTrackId);
   const lastSeed = useStore((s) => s.lastSeed);
   const playing = useLive((s) => s.playing);
+  const soundMode = useLive((s) => s.soundMode);
   const { setTrack, setFx, setTrackPattern, mutateTrack, revertTrack, surpriseMe, remixParts, evolveEnergy, setSwing } =
     useStore.getState();
   const t = project.tracks.find((x) => x.id === selectedId) ?? project.tracks[0];
@@ -99,6 +100,12 @@ export function Inspector() {
             </select>
           </label>
           <p className="muted small">{presetById.get(currentInst)?.description}</p>
+          {presetById.get(currentInst)?.sampled && (
+            <p className={`small sample-src ${soundMode === 'sampled' ? 'on' : ''}`}>
+              {soundMode === 'sampled' ? '● Recorded: ' : '○ Recorded version available (switch Sound to Sampled): '}
+              {presetById.get(currentInst)?.sampled}
+            </p>
+          )}
           <div className="knob-row">
             <Knob label="Volume" value={t.volume} max={1.2} defaultValue={0.8} color={t.color} format={(v) => (v < 0.005 ? '−∞' : `${(20 * Math.log10(v / 0.8)).toFixed(1)}dB`)} onChange={(v) => setTrack(t.id, { volume: v }, true)} />
             <Knob label="Pan" value={t.pan} min={-1} max={1} defaultValue={0} color={t.color} format={panFmt} onChange={(v) => setTrack(t.id, { pan: v }, true)} />

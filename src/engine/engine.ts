@@ -16,7 +16,8 @@ import type { Project, Quantize, TrackState } from '@/project/types';
 import { QUANTIZE_STEPS } from '@/project/types';
 import { createInstrument } from './instruments/presets';
 import type { Instrument } from './instruments/types';
-import { liveStore, type LiveTrack } from './live';
+import { liveStore, type LiveTrack, type SoundMode } from './live';
+import { timingOffset, velocityFor } from './feel';
 
 interface ActivePart {
   pattern: Pattern;
@@ -41,16 +42,26 @@ class TrackRuntime {
   readonly revSend = new Tone.Gain(0);
   readonly dlySend = new Tone.Gain(0);
   readonly meter = new Tone.Meter({ smoothing: 0.75 });
+  /** Instruments cached by `${presetId}|${soundMode}` so A/B switching is instant. */
   private insts = new Map<string, Instrument>();
   inst: Instrument | null = null;
   instId: string | null = null;
+  private instKey: string | null = null;
   active: ActivePart | null = null;
   pending: { patternId: string | null } | null = null;
   fill: FillPart | null = null;
   state: TrackState;
+  mode: SoundMode;
 
-  constructor(state: TrackState, master: Tone.ToneAudioNode, rev: Tone.ToneAudioNode, dly: Tone.ToneAudioNode) {
+  constructor(
+    state: TrackState,
+    mode: SoundMode,
+    master: Tone.ToneAudioNode,
+    rev: Tone.ToneAudioNode,
+    dly: Tone.ToneAudioNode,
+  ) {
     this.state = state;
+    this.mode = mode;
     this.input.chain(this.filter, this.drive, this.channel, master);
     this.channel.connect(this.revSend);
     this.channel.connect(this.dlySend);
@@ -59,31 +70,49 @@ class TrackRuntime {
     this.dlySend.connect(dly);
   }
 
+  private key(id: string, mode = this.mode) {
+    return `${id}|${mode}`;
+  }
+
   /** Build (but don't activate) an instrument ahead of a queued swap. */
   preload(id: string) {
-    if (this.insts.has(id)) return;
-    const created = createInstrument(id);
+    const key = this.key(id);
+    if (this.insts.has(key)) return;
+    const created = createInstrument(id, this.mode);
     if (!created) return;
     created.output.connect(this.input);
-    this.insts.set(id, created);
-    this.trim(new Set([id, this.instId ?? '']));
+    this.insts.set(key, created);
+    this.trim(new Set([key, this.instKey ?? '']));
   }
 
   /** `time` must be the transport callback time when called from the scheduler. */
   useInstrument(id: string, time?: number) {
-    if (this.instId === id && this.inst) return;
+    const key = this.key(id);
+    if (this.instKey === key && this.inst) return;
     this.preload(id);
-    const inst = this.insts.get(id);
+    const inst = this.insts.get(key);
     if (!inst) return;
     if (this.inst && this.inst !== inst) this.inst.releaseAll(time ?? Tone.now());
     this.inst = inst;
     this.instId = id;
-    this.trim(new Set([id]));
+    this.instKey = key;
+    this.trim(new Set([key]));
+  }
+
+  /** Switch between sampled and synth versions of the current instrument. */
+  setMode(mode: SoundMode) {
+    if (mode === this.mode) return;
+    this.mode = mode;
+    if (this.instId) {
+      const other = this.key(this.instId, mode === 'sampled' ? 'synth' : 'sampled');
+      this.useInstrument(this.instId);
+      this.trim(new Set([this.instKey ?? '', other]));
+    }
   }
 
   /** Keep the per-track instrument cache small. */
   private trim(keep: Set<string>) {
-    const MAX = 3;
+    const MAX = 4;
     for (const [key, i] of this.insts) {
       if (this.insts.size <= MAX) break;
       if (keep.has(key)) continue;
@@ -232,7 +261,7 @@ export class AudioEngine {
       seen.add(ts.id);
       let rt = this.tracks.get(ts.id);
       if (!rt) {
-        rt = new TrackRuntime(ts, this.masterIn, this.reverbIn, this.delayIn);
+        rt = new TrackRuntime(ts, liveStore.getState().soundMode, this.masterIn, this.reverbIn, this.delayIn);
         this.tracks.set(ts.id, rt);
       }
       rt.state = ts;
@@ -358,6 +387,17 @@ export class AudioEngine {
     return this.playing;
   }
 
+  /** A/B: switch every track between recorded and synthesised instruments. */
+  setSoundMode(mode: SoundMode) {
+    liveStore.setState({ soundMode: mode });
+    try {
+      localStorage.setItem('looplab:sound-mode', JSON.stringify(mode));
+    } catch {
+      /* preference just won't persist */
+    }
+    for (const rt of this.tracks.values()) rt.setMode(mode);
+  }
+
   queueFill() {
     if (!this.playing) return;
     this.fillQueued = true;
@@ -424,8 +464,10 @@ export class AudioEngine {
       const pack = getPack(pattern.packId);
       const th = effectiveHarmony(this.compat(), harmony, pack?.harmony);
       for (const { ev, rel } of evs) {
-        const when = time + rel * k * stepSec + Math.random() * 0.003;
-        const vel = Math.max(0.02, Math.min(1, (ev.hit?.v ?? ev.note?.v ?? 0.8) * (0.96 + Math.random() * 0.08)));
+        // Each genre's players sit differently against the beat (see feel.ts).
+        const offset = timingOffset(pattern.packId, pattern.role, ev.hit?.voice);
+        const when = Math.max(time - 0.02, time + rel * k * stepSec + offset);
+        const vel = velocityFor(pattern.packId, ev.hit?.v ?? ev.note?.v ?? 0.8);
         if (ev.hit) {
           rt.inst.hit?.(ev.hit.voice, vel, when);
         } else if (ev.note && rt.inst.notes) {
@@ -454,7 +496,8 @@ export class AudioEngine {
     const drums = [...this.tracks.values()].find((rt) => rt.state.role === 'drums');
     if (!drums || !drums.active) return;
     const pack = getPack(drums.active.pattern.packId);
-    const fillId = pack?.fills[0] ?? 'rr-drums-fill';
+    const fills = pack?.fills.length ? pack.fills : ['rr-drums-fill'];
+    const fillId = fills[Math.floor(Math.random() * fills.length)];
     const p = this.lookup(fillId);
     if (!p) return;
     const k = feelFactor(bpm, p.bpm, this.compat());

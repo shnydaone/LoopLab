@@ -18,4 +18,6 @@ export interface PresetInfo {
   role: Role;
   kind: 'drum' | 'pitched';
   description: string;
+  /** Present when a recorded (sampled) version exists: where the recordings come from. */
+  sampled?: string;
 }
