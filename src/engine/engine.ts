@@ -10,7 +10,7 @@ import { getBuiltinPattern, getPack } from '@/content/library';
 import { effectiveHarmony, feelFactor, resolveNote, type CompatMode } from '@/music/compat';
 import { compilePattern, eventsInWindow, type CompiledPattern } from '@/music/pattern';
 import { chordAt } from '@/music/theory';
-import type { Harmony, Pattern } from '@/music/types';
+import type { Harmony, Pattern, Role } from '@/music/types';
 import { STEPS_PER_BAR } from '@/music/types';
 import type { Project, Quantize, TrackState } from '@/project/types';
 import { QUANTIZE_STEPS } from '@/project/types';
@@ -31,16 +31,24 @@ interface FillPart extends ActivePart {
   crash: boolean;
 }
 
+const CARVE_HZ: Record<Role, number> = { drums: 28, bass: 30, guitar: 190, keys: 120, horns: 150, perc: 130 };
+const ROOM_SEND: Record<Role, number> = { drums: 0.22, bass: 0.04, guitar: 0.16, keys: 0.14, horns: 0.2, perc: 0.24 };
+const BUS_ROLES: Role[] = ['drums', 'perc'];
+
 const faderToDb = (v: number) => (v <= 0.001 ? -Infinity : 20 * Math.log10(v / 0.8));
 const filterHz = (x: number) => 80 * Math.pow(2, x * 8);
 
 class TrackRuntime {
   readonly input = new Tone.Gain(1);
+  /** Fixed low-cut per role so parts don't mask the kick and bass (mix "carving"). */
+  readonly carve = new Tone.Filter({ type: 'highpass', frequency: 20, Q: 0.6 });
   readonly filter = new Tone.Filter({ frequency: 20000, type: 'lowpass', rolloff: -12, Q: 0.7 });
   readonly drive = new Tone.Distortion({ distortion: 0.5, wet: 0 });
   readonly channel = new Tone.Channel({ volume: 0, pan: 0 });
   readonly revSend = new Tone.Gain(0);
   readonly dlySend = new Tone.Gain(0);
+  /** Every track feeds a little of the shared room, so the band sits in one space. */
+  readonly roomSend = new Tone.Gain(0);
   readonly meter = new Tone.Meter({ smoothing: 0.75 });
   /** Instruments cached by `${presetId}|${soundMode}` so A/B switching is instant. */
   private insts = new Map<string, Instrument>();
@@ -59,15 +67,20 @@ class TrackRuntime {
     master: Tone.ToneAudioNode,
     rev: Tone.ToneAudioNode,
     dly: Tone.ToneAudioNode,
+    room: Tone.ToneAudioNode,
   ) {
     this.state = state;
     this.mode = mode;
-    this.input.chain(this.filter, this.drive, this.channel, master);
+    this.carve.frequency.value = CARVE_HZ[state.role];
+    this.roomSend.gain.value = ROOM_SEND[state.role];
+    this.input.chain(this.carve, this.filter, this.drive, this.channel, master);
     this.channel.connect(this.revSend);
     this.channel.connect(this.dlySend);
+    this.channel.connect(this.roomSend);
     this.channel.connect(this.meter);
     this.revSend.connect(rev);
     this.dlySend.connect(dly);
+    this.roomSend.connect(room);
   }
 
   private key(id: string, mode = this.mode) {
@@ -139,7 +152,7 @@ class TrackRuntime {
 
   dispose() {
     for (const i of this.insts.values()) i.dispose();
-    for (const n of [this.input, this.filter, this.drive, this.channel, this.revSend, this.dlySend, this.meter]) n.dispose();
+    for (const n of [this.input, this.carve, this.filter, this.drive, this.channel, this.revSend, this.dlySend, this.roomSend, this.meter]) n.dispose();
   }
 }
 
@@ -167,6 +180,8 @@ export class AudioEngine {
   private reverbIn!: Tone.Gain;
   private delayIn!: Tone.Gain;
   private delay!: Tone.FeedbackDelay;
+  private drumBus!: Tone.Gain;
+  private roomIn!: Tone.Gain;
 
   get isReady() {
     return this.initialised;
@@ -181,15 +196,31 @@ export class AudioEngine {
       const ctx = Tone.getContext();
       ctx.lookAhead = 0.08;
 
+      // Master: sub-sonic clean-up, gentle "glue" compression, safety limiter.
       this.masterIn = new Tone.Gain(0.9);
-      const comp = new Tone.Compressor({ threshold: -16, ratio: 2.5, attack: 0.012, release: 0.2 });
+      const subCut = new Tone.Filter({ type: 'highpass', frequency: 24, Q: 0.6 });
+      const comp = new Tone.Compressor({ threshold: -18, ratio: 2, attack: 0.025, release: 0.22, knee: 10 });
       const limiter = new Tone.Limiter(-1);
       this.masterVol = new Tone.Volume(0);
       this.masterMeter = new Tone.Meter({ smoothing: 0.8 });
       this.analyser = new Tone.Analyser('fft', 64);
-      this.masterIn.chain(comp, limiter, this.masterVol, Tone.getDestination());
+      this.masterIn.chain(subCut, comp, limiter, this.masterVol, Tone.getDestination());
       this.masterVol.connect(this.masterMeter);
       this.masterVol.connect(this.analyser);
+
+      // Drum bus: kit and percussion compressed together like one recorded kit.
+      this.drumBus = new Tone.Gain(1);
+      const drumComp = new Tone.Compressor({ threshold: -16, ratio: 2.2, attack: 0.012, release: 0.12, knee: 6 });
+      const drumMakeup = new Tone.Gain(Tone.dbToGain(1.5));
+      this.drumBus.chain(drumComp, drumMakeup, this.masterIn);
+
+      // Shared room: a short, darkish ambience every instrument feeds a little of.
+      this.roomIn = new Tone.Gain(1);
+      const room = new Tone.Reverb({ decay: 0.75, preDelay: 0.006, wet: 1 });
+      await room.ready;
+      const roomHp = new Tone.Filter(240, 'highpass');
+      const roomLp = new Tone.Filter(6500, 'lowpass');
+      this.roomIn.chain(roomHp, room, roomLp, this.masterIn);
 
       this.reverbIn = new Tone.Gain(1);
       const reverb = new Tone.Reverb({ decay: 2.6, preDelay: 0.025, wet: 1 });
@@ -261,7 +292,8 @@ export class AudioEngine {
       seen.add(ts.id);
       let rt = this.tracks.get(ts.id);
       if (!rt) {
-        rt = new TrackRuntime(ts, liveStore.getState().soundMode, this.masterIn, this.reverbIn, this.delayIn);
+        const dest = BUS_ROLES.includes(ts.role) ? this.drumBus : this.masterIn;
+        rt = new TrackRuntime(ts, liveStore.getState().soundMode, dest, this.reverbIn, this.delayIn, this.roomIn);
         this.tracks.set(ts.id, rt);
       }
       rt.state = ts;

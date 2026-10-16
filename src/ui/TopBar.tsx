@@ -165,15 +165,15 @@ function SoundSwitch() {
   const pending = useLive((s) => s.samplesPending);
   const loaded = useLive((s) => s.samplesLoaded);
   return (
-    <div className="tb-field sound-switch" title="A/B: recorded instruments vs the original synthesised sounds. Switches instantly while playing.">
+    <div className="tb-field sound-switch" title="A/B: upgraded Studio instruments vs the original Classic synth sounds. Switches instantly while playing.">
       <span>Sound</span>
       <Segmented<SoundMode>
         label="Sound engine"
         value={mode}
         onChange={(m) => engine.setSoundMode(m)}
         options={[
-          { value: 'sampled', label: 'Sampled', title: 'Real recorded drums and bass (CC0 libraries)' },
-          { value: 'synth', label: 'Synth', title: 'Original all-synthesis sounds' },
+          { value: 'sampled', label: 'Studio', title: 'Recorded drums, percussion and bass (CC0) plus the modelled tonewheel and combo organs' },
+          { value: 'synth', label: 'Classic', title: 'The original all-synthesis sounds from Phase 1' },
         ]}
       />
       {mode === 'sampled' && pending > 0 && (

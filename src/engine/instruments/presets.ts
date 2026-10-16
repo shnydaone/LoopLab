@@ -1,6 +1,7 @@
 import * as Tone from 'tone';
 import type { SoundMode } from '../live';
 import { DrumKit, KITS } from './drumKit';
+import { ComboOrgan, TonewheelOrgan } from './organ';
 import { createPitched } from './pitched';
 import { SampledBass, type BassSampleDef } from './sampledBass';
 import { SampledKit, type KitSampleDef } from './sampledDrums';
@@ -34,7 +35,7 @@ const SAMPLED_KITS: Record<string, KitSampleDef> = {
 const SAMPLED_BASS: Record<string, BassSampleDef> = {
   'bass-dub': {
     set: 'bass-dub',
-    levelDb: -17,
+    levelDb: -16,
     release: 0.09,
     // Flatwounds on the neck pickup are already dark; keep the low end round
     // and steady, tuck away boxy mids, and level the dynamics like a DI + comp.
@@ -43,12 +44,13 @@ const SAMPLED_BASS: Record<string, BassSampleDef> = {
       new Tone.Filter({ type: 'lowshelf', frequency: 110, gain: 3 }),
       new Tone.Filter({ type: 'peaking', frequency: 420, Q: 1, gain: -3 }),
       new Tone.Filter({ type: 'lowpass', frequency: 2400, Q: 0.5 }),
-      new Tone.Compressor({ threshold: -24, ratio: 3.5, attack: 0.012, release: 0.16, knee: 8 }),
+      // Fast attack catches the finger transients so the bass sits steady under the mix.
+      new Tone.Compressor({ threshold: -27, ratio: 4, attack: 0.004, release: 0.16, knee: 8 }),
     ],
   },
   'bass-round': {
     set: 'bass-round',
-    levelDb: -17,
+    levelDb: -15.5,
     release: 0.06,
     staccatoBelow: 0.16,
     // Roundwound Jazz bass: keep the growl and finger definition for ska drive.
@@ -56,13 +58,31 @@ const SAMPLED_BASS: Record<string, BassSampleDef> = {
       new Tone.Filter({ type: 'highpass', frequency: 38, Q: 0.7 }),
       new Tone.Filter({ type: 'peaking', frequency: 950, Q: 1, gain: 2 }),
       new Tone.Filter({ type: 'lowpass', frequency: 5200, Q: 0.5 }),
-      new Tone.Compressor({ threshold: -22, ratio: 3, attack: 0.008, release: 0.12, knee: 8 }),
+      new Tone.Compressor({ threshold: -25, ratio: 3.5, attack: 0.003, release: 0.12, knee: 8 }),
     ],
   },
 };
 
+/** Modelled instruments used in Studio mode where no suitable CC0 recordings exist. */
+const MODELLED: Record<string, (id: string) => Instrument> = {
+  // Reggae bubble: classic "88 8000 000"-style registration with a touch of the
+  // 4' and soft fast 3rd-harmonic percussion for the pop, Leslie on slow.
+  'organ-bubble': (id) =>
+    new TonewheelOrgan(id, {
+      registration: '88 8400 000',
+      percussion: 3,
+      percDecay: 0.22,
+      percLevel: 0.55,
+      click: 0.35,
+      leslie: 'slow',
+      drive: 0.14,
+      level: 5,
+    }),
+  'organ-combo': (id) => new ComboOrgan(id, 2.8),
+};
+
 export function hasSamples(id: string): boolean {
-  return id in SAMPLED_KITS || id in SAMPLED_BASS;
+  return id in SAMPLED_KITS || id in SAMPLED_BASS || id in MODELLED;
 }
 
 function createSynth(id: string): Instrument | null {
@@ -80,6 +100,8 @@ export function createInstrument(id: string, mode: SoundMode = 'synth'): Instrum
     if (kit) return new SampledKit(id, kit, createSynth(id));
     const bass = SAMPLED_BASS[id];
     if (bass) return new SampledBass(id, bass, createSynth(id));
+    const modelled = MODELLED[id];
+    if (modelled) return modelled(id);
   }
   return createSynth(id);
 }

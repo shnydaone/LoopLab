@@ -102,7 +102,7 @@ export function Inspector() {
           <p className="muted small">{presetById.get(currentInst)?.description}</p>
           {presetById.get(currentInst)?.sampled && (
             <p className={`small sample-src ${soundMode === 'sampled' ? 'on' : ''}`}>
-              {soundMode === 'sampled' ? '● Recorded: ' : '○ Recorded version available (switch Sound to Sampled): '}
+              {soundMode === 'sampled' ? '● Studio sound: ' : '○ Studio version available (switch Sound to Studio): '}
               {presetById.get(currentInst)?.sampled}
             </p>
           )}

@@ -93,6 +93,15 @@ scripts/samples/pitch.mjs      pitch detection used to verify bass note mapping
 - `SampledBass` (`engine/instruments/sampledBass.ts`): monophonic like a real player (new note
   mutes the previous with a 6 ms fade), short release at note end, staccato samples for notes
   < 0.16 s (Growlybass), per-zone level normalisation, EQ + compression chain per preset.
+- **Modelled organs** (`engine/instruments/organ.ts`, Studio mode only): no CC0 tonewheel
+  recordings exist, and a tonewheel organ is itself additive, so it is modelled: nine drawbars
+  in one PeriodicWave on the 16' sub-fundamental, key click, single-trigger percussion,
+  two-rotor Leslie (AM + Doppler + pan), tube drive. Combo organ = reed-like divide-down
+  spectrum, formant peak, fast vibrato.
+- **Mix glue** (`engine/engine.ts`): drums + perc → drum bus compressor; every track sends
+  a fixed amount (`ROOM_SEND`) to a short shared room reverb; per-role low-cut (`CARVE_HZ`);
+  master = 24 Hz sub-cut → gentle glue compressor → limiter. Applies in both sound modes.
+- The UI calls the modes **Studio** (internal `sampled`) and **Classic** (internal `synth`).
 - **Player feel** (`engine/feel.ts`): per-genre timing offsets + human jitter (roots reggae
   snare/hats/skank/bass lay back 5–12 ms; two-tone pushes 2–3 ms) and velocity spread.
 
