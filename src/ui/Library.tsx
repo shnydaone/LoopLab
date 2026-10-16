@@ -22,6 +22,11 @@ const TAGLINE: Record<string, string> = {
   jungle: 'Breaks • Rolling sub • Ragga',
   'trip-hop': 'Downtempo • Moody • Cinematic',
   'classic-house': 'Four-to-the-floor • Classic • Deep',
+  'acid-house': '303 acid • Squelch • Hypnotic',
+  'old-school-rave': 'Piano • Hoovers • Euphoric',
+  'breakbeat-hardcore': 'Chopped breaks • Stabs • 1992',
+  'happy-hardcore': 'Bright • Fast • Anthemic',
+  'hardcore-techno': 'Gabber kick • Dark • Industrial',
 };
 
 function PackRow({ packId }: { packId: string }) {

@@ -260,6 +260,86 @@ function Scene({ packId, uid }: { packId: string; uid: string }) {
           ))}
         </>
       );
+    case 'acid-house':
+      return (
+        <>
+          <rect width="160" height="120" fill="#0b1405" />
+          {Array.from({ length: 8 }, (_, i) => (
+            <circle key={i} cx="80" cy="60" r={14 + i * 12} fill="none" stroke="#c6ff00" strokeOpacity={0.22 - i * 0.025} strokeWidth="3" />
+          ))}
+          <circle cx="80" cy="60" r="30" fill="#ffe600" />
+          <ellipse cx="70" cy="52" rx="3.5" ry="6" fill="#111" />
+          <ellipse cx="90" cy="52" rx="3.5" ry="6" fill="#111" />
+          <path d="M62 64 C 68 80, 92 80, 98 64" stroke="#111" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+          {[18, 34, 126, 142].map((x) => (
+            <g key={x}>
+              <circle cx={x} cy="104" r="6" fill="#1d2a0d" stroke="#c6ff00" strokeOpacity="0.6" />
+              <line x1={x} y1="104" x2={x + 3} y2="99" stroke="#c6ff00" strokeWidth="1.5" />
+            </g>
+          ))}
+        </>
+      );
+    case 'old-school-rave':
+      return (
+        <>
+          <rect width="160" height="120" fill="#05040f" />
+          {[-50, -28, -8, 10, 30, 52].map((a, i) => (
+            <path key={a} d={`M80 -4 L ${80 + Math.tan((a * Math.PI) / 180) * 130 - 3} 126 L ${80 + Math.tan((a * Math.PI) / 180) * 130 + 3} 126 Z`} fill={i % 2 ? '#ff3df0' : '#00e5ff'} opacity="0.55" />
+          ))}
+          <circle cx="80" cy="-2" r="8" fill="#ffffff" opacity="0.9" />
+          <path d="M0 120 L 0 100 C 10 96, 14 82, 18 80 L 22 96 C 30 92, 34 78, 40 76 L 44 94 C 54 92, 58 86, 62 72 L 66 92 C 76 90, 82 84, 86 70 L 92 90 C 102 90, 106 80, 110 74 L 114 94 C 124 92, 128 84, 134 76 L 138 96 C 146 96, 152 90, 160 88 L 160 120 Z" fill="#000" />
+        </>
+      );
+    case 'breakbeat-hardcore':
+      return (
+        <>
+          <rect width="160" height="120" fill="#120700" />
+          {Array.from({ length: 12 }, (_, i) => (
+            <path key={i} d={`M${i * 24 - 60} 0 L ${i * 24 - 48} 0 L ${i * 24 + 12} 120 L ${i * 24} 120 Z`} fill="#ff7a00" opacity="0.9" />
+          ))}
+          <rect x="34" y="18" width="92" height="84" rx="6" fill="#0d0d0d" stroke="#ff7a00" strokeWidth="2" />
+          <circle cx="80" cy="44" r="16" fill="#1c1c1c" stroke="#555" strokeWidth="2" />
+          <circle cx="80" cy="44" r="6" fill="#333" />
+          <circle cx="80" cy="82" r="12" fill="#1c1c1c" stroke="#555" strokeWidth="2" />
+          <circle cx="80" cy="82" r="4" fill="#333" />
+        </>
+      );
+    case 'happy-hardcore':
+      return (
+        <>
+          <defs>
+            <linearGradient id={g('sky')} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#ff7ad9" />
+              <stop offset="1" stopColor="#7a5cff" />
+            </linearGradient>
+          </defs>
+          <rect width="160" height="120" fill={`url(#${g('sky')})`} />
+          {['#ff4f4f', '#ffa53d', '#ffe14f', '#5be37a', '#4fc3ff', '#9b6bff'].map((c, i) => (
+            <path key={c} d={`M${10 + i * 6} 120 A ${70 - i * 6} ${70 - i * 6} 0 0 1 ${150 - i * 6} 120`} fill="none" stroke={c} strokeWidth="6" />
+          ))}
+          {[
+            [24, 22],
+            [132, 18],
+            [118, 44],
+            [40, 50],
+            [80, 14],
+          ].map(([x, y]) => (
+            <path key={`${x}-${y}`} d={`M${x} ${y - 6} L ${x + 2} ${y - 2} L ${x + 6} ${y} L ${x + 2} ${y + 2} L ${x} ${y + 6} L ${x - 2} ${y + 2} L ${x - 6} ${y} L ${x - 2} ${y - 2} Z`} fill="#fff" opacity="0.9" />
+          ))}
+        </>
+      );
+    case 'hardcore-techno':
+      return (
+        <>
+          <rect width="160" height="120" fill="#080202" />
+          {Array.from({ length: 9 }, (_, i) => (
+            <path key={i} d={`M0 ${20 + i * 12} L 160 ${20 + i * 12}`} stroke="#ff2a2a" strokeOpacity="0.12" />
+          ))}
+          <circle cx="80" cy="60" r="34" fill="none" stroke="#ff2a2a" strokeWidth="5" />
+          <circle cx="80" cy="60" r="34" fill="none" stroke="#ff2a2a" strokeWidth="14" strokeOpacity="0.15" />
+          <path d="M86 20 L 66 64 L 82 64 L 72 102 L 98 52 L 82 52 L 94 20 Z" fill="#ff2a2a" />
+        </>
+      );
     default:
       return (
         <>

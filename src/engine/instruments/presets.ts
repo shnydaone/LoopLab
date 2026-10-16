@@ -56,6 +56,24 @@ const SAMPLED_KITS: Record<string, KitSampleDef> = {
   },
   // Trip-hop "dusty break": the fat vintage kit slowed down, rolled-off top,
   // boosted lows, tape saturation and slow-release compression.
+  // Breakbeat hardcore: the break pushed further up and hit harder than jungle.
+  'kit-hardcore': {
+    sets: ['kit-roots', 'perc'],
+    groupSet: 'kit-roots',
+    groupRef: 'kick',
+    groupPeakDb: -1,
+    voicePeakDb: -6.5,
+    pitch: 4,
+    trims: { snare: 2.5, hatC: -1.5, ride: -2 },
+    chain: () => [
+      new Tone.Filter({ type: 'highpass', frequency: 50, Q: 0.6 }),
+      new Tone.Filter({ type: 'peaking', frequency: 3800, Q: 0.8, gain: 5 }),
+      new Tone.Compressor({ threshold: -30, ratio: 8, attack: 0.001, release: 0.06, knee: 3 }),
+      new Tone.Distortion({ distortion: 0.45, wet: 0.4 }),
+      new Tone.Filter({ type: 'lowpass', frequency: 11000, Q: 0.5 }),
+      new Tone.Gain(Tone.dbToGain(2)),
+    ],
+  },
   'kit-dusty': {
     sets: ['kit-twotone', 'perc'],
     groupSet: 'kit-twotone',
@@ -82,6 +100,7 @@ const SAMPLED_KITS: Record<string, KitSampleDef> = {
 const SYNTH_ALIAS: Record<string, string> = {
   'kit-break': 'kit-roots',
   'kit-dusty': 'kit-twotone',
+  'kit-hardcore': 'dm-hardcore',
   'perc-jungle': 'perc-fx',
   'perc-trip': 'perc-fx',
   'perc-house': 'perc-fx',

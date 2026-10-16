@@ -77,6 +77,12 @@ export const FEELS: Record<string, FeelProfile> = {
     jitter: 1.5,
     velSpread: 0.04,
   },
+  // Machines are tight; the hardcore break pushes like jungle's.
+  'acid-house': { drums: { clap: 2 }, drumJitter: 1, roles: { bass: 0, guitar: 0, keys: 0, horns: 0 }, jitter: 1, velSpread: 0.03 },
+  'old-school-rave': { drums: {}, drumJitter: 1, roles: { bass: 0, guitar: 0, keys: 0, horns: 0 }, jitter: 1, velSpread: 0.03 },
+  'breakbeat-hardcore': { drums: { snare: -2, hatC: 1 }, drumJitter: 2, roles: { bass: 0, guitar: 0, keys: 0, horns: 0 }, jitter: 1, velSpread: 0.04 },
+  'happy-hardcore': { drums: {}, drumJitter: 0.5, roles: { bass: 0, guitar: 0, keys: 0, horns: 0 }, jitter: 0.5, velSpread: 0.02 },
+  'hardcore-techno': { drums: {}, drumJitter: 0.3, roles: { bass: 0, guitar: 0, keys: 0, horns: 0 }, jitter: 0.5, velSpread: 0.02 },
   'two-tone-ska': {
     drums: { snare: -3, hatC: -2, hatO: -2, ride: -2 },
     drumJitter: 2,

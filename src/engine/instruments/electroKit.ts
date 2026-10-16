@@ -25,6 +25,13 @@ export interface ElectroConfig {
   congas: [number, number, number];
   /** Kit-bus saturation 0..1 (tape/console drive). */
   drive: number;
+  /**
+   * Kick-only waveshaper gain (1 = gentle, 12+ = gabber). The kick runs through
+   * its own saturator and low-pass before the kit bus so hats stay clean.
+   */
+  kickDrive?: number;
+  /** Low-pass after the kick saturator, Hz. */
+  kickTone?: number;
   /** Output level trims in dB. */
   levels?: Partial<Record<DrumVoice, number>>;
 }
@@ -78,6 +85,8 @@ export class ElectroKit implements Instrument {
   private hatVca: GainNode;
   private cymVca: GainNode;
   private live: { src: AudioScheduledSourceNode; gain: GainNode }[] = [];
+  /** Where kick voices go: the kit bus, or the kick saturator when configured. */
+  private kickDest: Tone.InputNode;
 
   constructor(
     readonly id: string,
@@ -86,6 +95,17 @@ export class ElectroKit implements Instrument {
     const drive = this.track(new Tone.Distortion({ distortion: 0.35, wet: cfg.drive, oversample: '2x' }));
     const glue = this.track(new Tone.Compressor({ threshold: -14, ratio: 2.5, attack: 0.004, release: 0.09, knee: 6 }));
     this.bus.chain(drive, glue, this.output);
+    this.kickDest = this.bus;
+    if (cfg.kickDrive) {
+      const k = cfg.kickDrive;
+      const norm = Math.tanh(k);
+      const shaper = this.track(new Tone.WaveShaper((x) => Math.tanh(x * k) / norm, 4096));
+      shaper.oversample = '4x';
+      const tone = this.track(new Tone.Filter({ type: 'lowpass', frequency: cfg.kickTone ?? 7000, Q: 0.6 }));
+      const kin = this.track(new Tone.Gain(1));
+      kin.chain(shaper, tone, this.bus);
+      this.kickDest = kin;
+    }
 
     // Persistent 808-style metal bank feeding the hat and cymbal VCAs.
     const ctx = Tone.getContext();
@@ -134,7 +154,7 @@ export class ElectroKit implements Instrument {
   }
 
   /** A gain node wired to the kit bus that cleans itself up. */
-  private vca(src: AudioScheduledSourceNode, chainTo?: AudioNode): GainNode {
+  private vca(src: AudioScheduledSourceNode, chainTo?: AudioNode, dest: Tone.InputNode = this.bus): GainNode {
     const ctx = Tone.getContext();
     const g = ctx.createGain();
     if (chainTo) {
@@ -143,7 +163,7 @@ export class ElectroKit implements Instrument {
     } else {
       src.connect(g);
     }
-    Tone.connect(g, this.bus);
+    Tone.connect(g, dest);
     const entry = { src, gain: g };
     this.live.push(entry);
     src.onended = () => {
@@ -155,13 +175,13 @@ export class ElectroKit implements Instrument {
     return g;
   }
 
-  private osc(type: OscillatorType, f0: number, t: number, len: number, f1?: number, pitchTime = 0.05, filter?: BiquadFilterNode) {
+  private osc(type: OscillatorType, f0: number, t: number, len: number, f1?: number, pitchTime = 0.05, filter?: BiquadFilterNode, dest?: Tone.InputNode) {
     const ctx = Tone.getContext();
     const o = ctx.createOscillator();
     o.type = type;
     o.frequency.setValueAtTime(f0, t);
     if (f1 !== undefined) o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + pitchTime);
-    const g = this.vca(o, filter);
+    const g = this.vca(o, filter, dest);
     o.start(t);
     o.stop(t + len);
     return g;
@@ -201,9 +221,9 @@ export class ElectroKit implements Instrument {
     const vel = 0.35 + 0.65 * v;
     switch (voice) {
       case 'kick': {
-        const g = this.osc('sine', c.kick.start, t, c.kick.decay + 0.1, c.kick.end, c.kick.pitchTime);
+        const g = this.osc('sine', c.kick.start, t, c.kick.decay + 0.1, c.kick.end, c.kick.pitchTime, undefined, this.kickDest);
         this.decay(g, t, c.kick.level * vel * this.lvl('kick'), c.kick.decay);
-        const h = this.osc('sine', c.kick.start * 2.2, t, 0.03, c.kick.end * 2, 0.012);
+        const h = this.osc('sine', c.kick.start * 2.2, t, 0.03, c.kick.end * 2, 0.012, undefined, this.kickDest);
         this.decay(h, t, 0.25 * vel, 0.02);
         if (c.kick.click > 0) {
           const { g: cg } = this.noiseHit(t, 0.012, 'highpass', 1200);
@@ -465,6 +485,37 @@ export const ELECTRO_KITS: Record<string, ElectroConfig> = {
     congas: [310, 230, 165],
     drive: 0.15,
     levels: { hatC: -3, hatO: -4 },
+  },
+  // Early-90s hardcore / rave 909: harder, saturated kick, crisp snare, bright hats.
+  'dm-hardcore': {
+    kick: { start: 240, end: 52, pitchTime: 0.03, decay: 0.34, click: 0.5, level: 1 },
+    snare: { tone: [200, 350], toneDecay: 0.08, noiseDecay: 0.15, noiseHp: 1700, noise: 0.85, level: 0.8 },
+    clap: { bp: 1250, decay: 0.15, level: 0.85 },
+    hat: { tune: 1.18, closed: 0.045, open: 0.3, level: 0.55 },
+    cymbal: { ride: 1.15, crash: 1.6, level: 0.35 },
+    toms: [240, 180, 130],
+    tomDecay: 0.28,
+    congas: [340, 255, 185],
+    drive: 0.25,
+    kickDrive: 2.6,
+    kickTone: 9000,
+    levels: { kick: -3, hatC: -2, hatO: -3 },
+  },
+  // Gabber / hardcore techno: a long, massively overdriven kick that becomes a
+  // pitched, distorted "doom", plus a dark industrial snare and metallic hats.
+  'dm-gabber': {
+    kick: { start: 280, end: 50, pitchTime: 0.07, decay: 0.48, click: 0.7, level: 1 },
+    snare: { tone: [160, 240], toneDecay: 0.1, noiseDecay: 0.22, noiseHp: 900, noise: 0.9, level: 0.75 },
+    clap: { bp: 950, decay: 0.22, level: 0.8 },
+    hat: { tune: 0.88, closed: 0.05, open: 0.38, level: 0.5 },
+    cymbal: { ride: 0.9, crash: 1.8, level: 0.35 },
+    toms: [200, 150, 105],
+    tomDecay: 0.3,
+    congas: [300, 220, 160],
+    drive: 0.35,
+    kickDrive: 14,
+    kickTone: 5200,
+    levels: { kick: -5, hatC: -3, hatO: -4, clap: -1 },
   },
   // Percussion + FX box (house percussion, risers, impacts, crackle).
   'perc-fx': {

@@ -162,6 +162,29 @@ scripts/samples/pitch.mjs      pitch detection used to verify bass note mapping
   preference is per browser (localStorage), so check it before trusting meter readings.
 - Vite watches with polling (`vite.config.ts`) because the native Windows watcher missed edits.
 
+### Electronic engine (Stage B: Acid House, Rave, Breakbeat Hardcore, Happy Hardcore, Gabber)
+
+- **AcidBass** (`engine/instruments/acid.ts`, presets `acid-303`, `acid-303-dist`, `acid-303-deep`,
+  `acid-303-lead`, `acid-303-scream`): one saw/square oscillator → resonant 24 dB low-pass →
+  amp, optional waveshaper. 303 rules: velocity ≥ 0.88 = ACCENT (louder, brighter, faster filter
+  decay); a note held past the next note's start = SLIDE (60 ms glide, envelopes not retriggered).
+  It reports `mono = false` so the engine does not clip note lengths (clipping would erase slides).
+  `sweep` moves the resting cutoff over N bars so loops evolve. Author slides with `ac()` /
+  `ac8()` in `acidHouse.ts`; keep normal notes at v ≈ 0.7 so humanised velocity never crosses
+  the accent threshold.
+- **HooverInst** (`hoover`): detuned saw stack + PWM pulse an octave down, swoops up a fourth into
+  each note and dives an octave on release, chorus + drive.
+- **Drum machines**: `ElectroConfig.kickDrive` sends only the kick through a tanh waveshaper +
+  low-pass (`kickTone`) before the kit bus. `dm-hardcore` (gentle, punchy) and `dm-gabber`
+  (drive 14: the distorted gabber "doom"). `kit-hardcore` = break kit +4 st, harder crunch.
+- **Synths**: `rave-stab` (square chords in octaves), `hc-stab` (pitched-up FM stab with warble),
+  `dark-stab` (driven detuned saws), `supersaw-lead`, `hc-bass` (offbeat rave bass),
+  `industrial-bass`. `perc-fx` is now a selectable preset (sirens, zaps, risers, impacts).
+- Breakbeat Hardcore layers a saturated 909 kick on the **perc** track under the break (that is
+  how the records were made); with flexible tracks, users can add more layers.
+- Levels were set with the meters at the main groove and drop of each pack (Studio mode):
+  drums −4…−10 dB peak, basses −10…−18, master peaks −2…−6 (limiter at −1).
+
 ### Adding a genre pack
 
 1. Create `src/content/packs/<name>.ts` using the DSL in `content/dsl.ts`
@@ -221,9 +244,9 @@ at full tempo, so their chops sit on every eighth-note "and" (2, 6, 10, 14). An 
   organs, player feel, mix glue, Studio/Classic A/B. Still synthesised: Bright Keys (FM piano),
   Tine EP, dub siren, claps. Next: Eric's listening review, then piano/EP samples
   (e.g. Salamander/VSCO upright, jRhodes — check licences) and per-instrument polish.
-- **Electronic collection** — Stage A done (Old-School Jungle 165, Trip-Hop 88, Classic House 124),
-  awaiting Eric's audition. Stage B next: Acid House (expressive 303-style bass with filter/accent/
-  slide), Old-School Rave, Breakbeat Hardcore, Happy Hardcore, Hardcore Techno/Gabber.
+- **Electronic collection** — done, awaiting Eric's audition: Stage A (Old-School Jungle 165,
+  Trip-Hop 88, Classic House 124) and Stage B (Acid House 126, Old-School Rave 135, Breakbeat
+  Hardcore 145, Happy Hardcore 172, Hardcore Techno 185).
 - **Phase 2: Groove library & playground** — rock, funk, punk, hip-hop, pop, electronic,
   synthwave, jazz packs; One Drop / Rockers / Steppers / Dub / Dancehall sub-packs; trad ska,
   ska-punk, rocksteady; mood/energy filters for Surprise Me; key/chord compatibility scoring;

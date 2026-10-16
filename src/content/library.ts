@@ -4,9 +4,14 @@
  * (browser, Surprise Me, compatibility) picks them up automatically.
  */
 import type { GenrePack, Pattern, Role } from '@/music/types';
+import { acidHouse } from './packs/acidHouse';
+import { breakbeatHardcore } from './packs/breakbeatHardcore';
 import { classicHouse } from './packs/classicHouse';
 import { dub } from './packs/dub';
+import { happyHardcore } from './packs/happyHardcore';
+import { hardcoreTechno } from './packs/hardcoreTechno';
 import { jungle } from './packs/jungle';
+import { oldSchoolRave } from './packs/oldSchoolRave';
 import { tripHop } from './packs/tripHop';
 import { kingstonSka } from './packs/kingstonSka';
 import { rocksteady } from './packs/rocksteady';
@@ -25,6 +30,11 @@ export const PACKS: GenrePack[] = [
   jungle,
   tripHop,
   classicHouse,
+  acidHouse,
+  oldSchoolRave,
+  breakbeatHardcore,
+  happyHardcore,
+  hardcoreTechno,
 ];
 
 export const FAMILIES = Array.from(new Set(PACKS.map((p) => p.family)));

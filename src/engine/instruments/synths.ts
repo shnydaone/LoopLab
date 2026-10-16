@@ -4,6 +4,7 @@
  * glide, saturation, modulation and effects tuned to the role it plays.
  */
 import * as Tone from 'tone';
+import { AcidBass, HooverInst } from './acid';
 import { TonewheelOrgan } from './organ';
 import { BassInst, PolyInst } from './pitched';
 import type { Instrument } from './types';
@@ -88,7 +89,112 @@ export function createElectroSynth(id: string): Instrument | null {
         0.2,
       );
 
+    case 'acid-303':
+      // Squelchy saw acid: moderate resonance, deep env mod, cutoff sweeping over 8 bars.
+      return new AcidBass(id, { wave: 'sawtooth', cutoff: 260, envMod: 3.2, decay: 0.32, resonance: 6.5, drive: 0, level: db(-4.5), sweep: { bars: 8, depth: 1.1 } });
+    case 'acid-303-dist':
+      // Overdriven acid: screaming resonance into a waveshaper, square wave, faster sweep.
+      return new AcidBass(id, { wave: 'square', cutoff: 220, envMod: 3.6, decay: 0.26, resonance: 9, drive: 3.2, level: db(-8.5), sweep: { bars: 4, depth: 1.3 } });
+    case 'acid-303-lead':
+      // A 303 played up high as a lead: brighter resting cutoff, shorter envelope, quieter.
+      return new AcidBass(id, { wave: 'sawtooth', cutoff: 520, envMod: 2.6, decay: 0.22, resonance: 7, drive: 0, level: db(-12), sweep: { bars: 8, depth: 0.9 } });
+    case 'acid-303-scream':
+      // Distorted acid lead for hardcore: square, saturated, sits above the mix without burying it.
+      return new AcidBass(id, { wave: 'square', cutoff: 480, envMod: 3, decay: 0.2, resonance: 9, drive: 3, level: db(-16), sweep: { bars: 4, depth: 1 } });
+    case 'acid-303-deep':
+      // Dark, rubbery acid: low cutoff, little resonance, long decay, no sweep.
+      return new AcidBass(id, { wave: 'sawtooth', cutoff: 180, envMod: 2.4, decay: 0.45, resonance: 4, drive: 0.9, level: db(-3.5) });
+    case 'hc-bass':
+      // Rave / happy-hardcore offbeat bass: punchy detuned saw with a snappy filter and grit.
+      return new BassInst(
+        id,
+        db(-3),
+        {
+          oscillator: { type: 'fatsawtooth', count: 2, spread: 16 },
+          filter: { type: 'lowpass', Q: 2.2, rolloff: -24 },
+          filterEnvelope: { attack: 0.001, decay: 0.13, sustain: 0.25, release: 0.08, baseFrequency: 170, octaves: 3.2 },
+          envelope: { attack: 0.002, decay: 0.16, sustain: 0.45, release: 0.06 },
+        },
+        0.35,
+        0.45,
+      );
+    case 'industrial-bass':
+      // Hardcore-techno bass: distorted square, tight and aggressive, sits under the gabber kick.
+      return new BassInst(
+        id,
+        db(-1),
+        {
+          oscillator: { type: 'fatsquare', count: 2, spread: 10 },
+          filter: { type: 'lowpass', Q: 3, rolloff: -24 },
+          filterEnvelope: { attack: 0.001, decay: 0.18, sustain: 0.2, release: 0.08, baseFrequency: 120, octaves: 2.6 },
+          envelope: { attack: 0.002, decay: 0.2, sustain: 0.35, release: 0.05 },
+        },
+        0.25,
+        0.85,
+      );
+
     // ───────── keys / pads ─────────
+    case 'rave-stab':
+      // Early-90s rave stab: fat square chords an octave apart, resonant, driven, short decay.
+      return new PolyInst(
+        id,
+        db(-8),
+        () =>
+          new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: 'fatsquare', count: 2, spread: 22 },
+            envelope: { attack: 0.002, decay: 0.24, sustain: 0.12, release: 0.16 },
+          }),
+        [
+          new Tone.Filter({ type: 'highpass', frequency: 150, Q: 0.6 }),
+          new Tone.Filter({ type: 'lowpass', frequency: 3600, Q: 2.4 }),
+          new Tone.Distortion({ distortion: 0.4, wet: 0.4 }),
+          new Tone.Chorus({ frequency: 0.9, delayTime: 3, depth: 0.4, wet: 0.35 }).start(),
+          new Tone.Compressor({ threshold: -18, ratio: 3, attack: 0.003, release: 0.1 }),
+        ],
+        { layers: [0, 12] },
+      );
+    case 'hc-stab':
+      // Pitched-up-sample stab: bright FM chord transposed high, with the warble and
+      // thin top of a sampler pushed up several semitones.
+      return new PolyInst(
+        id,
+        db(-8),
+        () =>
+          new Tone.PolySynth(Tone.FMSynth, {
+            harmonicity: 2.01,
+            modulationIndex: 7,
+            oscillator: { type: 'square' },
+            modulation: { type: 'sine' },
+            envelope: { attack: 0.002, decay: 0.3, sustain: 0.1, release: 0.18 },
+            modulationEnvelope: { attack: 0.002, decay: 0.15, sustain: 0.2, release: 0.2 },
+          }),
+        [
+          new Tone.Filter({ type: 'highpass', frequency: 420, Q: 0.7 }),
+          new Tone.Filter({ type: 'peaking', frequency: 2600, Q: 1, gain: 4 }),
+          new Tone.Vibrato({ frequency: 9, depth: 0.06 }),
+          new Tone.Distortion({ distortion: 0.25, wet: 0.35 }),
+          new Tone.Compressor({ threshold: -18, ratio: 3, attack: 0.003, release: 0.1 }),
+        ],
+        { layers: [12] },
+      );
+    case 'dark-stab':
+      // Hardcore-techno stab: detuned saws an octave apart through a low, resonant filter and heavy drive.
+      return new PolyInst(
+        id,
+        db(-6),
+        () =>
+          new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: 'fatsawtooth', count: 3, spread: 42 },
+            envelope: { attack: 0.002, decay: 0.35, sustain: 0.05, release: 0.3 },
+          }),
+        [
+          new Tone.Filter({ type: 'lowpass', frequency: 1700, Q: 4 }),
+          new Tone.Distortion({ distortion: 0.65, wet: 0.6, oversample: '2x' }),
+          new Tone.Filter({ type: 'highpass', frequency: 90, Q: 0.6 }),
+          new Tone.Compressor({ threshold: -20, ratio: 4, attack: 0.003, release: 0.12 }),
+        ],
+        { layers: [0, -12] },
+      );
     case 'house-piano':
       // Bright FM piano for stabs: a hard, metallic attack that settles quickly.
       return new PolyInst(
@@ -192,6 +298,27 @@ export function createElectroSynth(id: string): Instrument | null {
       );
 
     // ───────── leads ─────────
+    case 'hoover':
+      return new HooverInst(id, db(-5));
+    case 'supersaw-lead':
+      // Euphoric happy-hardcore lead: wide supersaw in octaves, chorus and a dotted-eighth echo.
+      return new PolyInst(
+        id,
+        db(-6),
+        () =>
+          new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: 'fatsawtooth', count: 3, spread: 26 },
+            envelope: { attack: 0.004, decay: 0.3, sustain: 0.65, release: 0.25 },
+          }),
+        [
+          new Tone.Filter({ type: 'highpass', frequency: 220, Q: 0.6 }),
+          new Tone.Filter({ type: 'lowpass', frequency: 7000, Q: 0.8 }),
+          new Tone.Chorus({ frequency: 1.2, delayTime: 3, depth: 0.5, wet: 0.4 }).start(),
+          new Tone.FeedbackDelay({ delayTime: '8n.', feedback: 0.25, wet: 0.18 }),
+          new Tone.Compressor({ threshold: -18, ratio: 3, attack: 0.004, release: 0.12 }),
+        ],
+        { layers: [0, 12] },
+      );
     case 'theremin-lead':
       // Eerie sine with slow glide and wide vibrato.
       return new BassInst(

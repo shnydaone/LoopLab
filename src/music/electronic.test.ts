@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getBuiltinPattern } from '@/content/library';
+import { getBuiltinPattern, getPack } from '@/content/library';
 import { buildRollPattern } from './builds';
 import { feelFactor } from './compat';
 import { eventImportance, keepAtDensity } from './density';
@@ -79,5 +79,59 @@ describe('cross-genre tempo feel', () => {
     expect(feelFactor(76, 165, 'safe')).toBe(0.5); // jungle break in a reggae project runs double-time
     expect(feelFactor(124, 124, 'safe')).toBe(1);
     expect(feelFactor(88, 124, 'safe')).toBe(1); // house parts in trip-hop stay straight
+  });
+});
+
+describe('electronic collection, stage B', () => {
+  const RANGES: Record<string, [number, number]> = {
+    'acid-house': [120, 135],
+    'old-school-rave': [125, 145],
+    'breakbeat-hardcore': [135, 155],
+    'happy-hardcore': [160, 180],
+    'hardcore-techno': [160, 200],
+  };
+
+  it('sits every pack inside its genre tempo range with all six section kinds', () => {
+    for (const [id, [lo, hi]] of Object.entries(RANGES)) {
+      const pack = getPack(id)!;
+      expect(pack, id).toBeTruthy();
+      expect(pack.bpm).toBeGreaterThanOrEqual(lo);
+      expect(pack.bpm).toBeLessThanOrEqual(hi);
+      const kinds = new Set(pack.sections.map((s) => s.kind));
+      for (const k of ['intro', 'verse', 'chorus', 'breakdown', 'outro']) expect(kinds.has(k as never), `${id} ${k}`).toBe(true);
+      expect(pack.fills.length).toBeGreaterThan(0);
+      expect(pack.patterns.filter((p) => p.role === 'drums' && !p.tags.includes('fill')).length).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('writes real 303 slides (overlapping notes) and accents into the acid lines', () => {
+    const acid = getPack('acid-house')!.patterns.filter((p) => p.instrument.startsWith('acid-303'));
+    expect(acid.length).toBeGreaterThanOrEqual(4);
+    for (const p of acid) {
+      const notes = [...p.notes!].sort((a, b) => a.t - b.t);
+      const slides = notes.filter((nt, i) => i < notes.length - 1 && nt.t + nt.d > notes[i + 1].t);
+      expect(slides.length, `${p.id} slides`).toBeGreaterThan(0);
+      expect(notes.some((nt) => nt.v >= 0.88), `${p.id} accents`).toBe(true);
+      expect(notes.some((nt) => nt.v < 0.88), `${p.id} unaccented`).toBe(true);
+    }
+  });
+
+  it('keeps Happy Hardcore and Hardcore Techno clearly different', () => {
+    const happy = getPack('happy-hardcore')!;
+    const gabber = getPack('hardcore-techno')!;
+    expect(happy.harmony.mode).toBe('major');
+    expect(gabber.harmony.mode).toBe('minor');
+    const kits = (id: string) => new Set(getPack(id)!.patterns.filter((p) => p.role === 'drums').map((p) => p.instrument));
+    expect([...kits('happy-hardcore')]).toEqual(['dm-hardcore']);
+    expect([...kits('hardcore-techno')]).toEqual(['dm-gabber']);
+    expect(gabber.bpm).toBeGreaterThan(happy.bpm);
+  });
+
+  it('programs breakbeat hardcore as chopped breaks, not a straight beat', () => {
+    const breaks = getPack('breakbeat-hardcore')!.patterns.filter((p) => p.role === 'drums');
+    expect(breaks.every((p) => p.tags.includes('break'))).toBe(true);
+    const main = getBuiltinPattern('bh-break-main')!;
+    const kicks = main.hits!.filter((h) => h.voice === 'kick').map((h) => h.t % 16);
+    expect(kicks.some((t) => t % 4 !== 0)).toBe(true); // syncopated, not four-on-the-floor
   });
 });
