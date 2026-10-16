@@ -1,6 +1,8 @@
 import * as Tone from 'tone';
 import type { SoundMode } from '../live';
 import { DrumKit, KITS } from './drumKit';
+import { ELECTRO_KITS, ElectroKit } from './electroKit';
+import { createElectroSynth } from './synths';
 import { ComboOrgan, TonewheelOrgan } from './organ';
 import { SampledGuitar, type GuitarSampleDef } from './sampledGuitar';
 import { SampledHorns, type HornSectionDef } from './sampledHorns';
@@ -32,6 +34,59 @@ const SAMPLED_KITS: Record<string, KitSampleDef> = {
   },
   'perc-roots': { sets: ['perc'], voicePeakDb: -5.5, trims: { handLo: 1, shaker: -4, handHi: -2 } },
   'perc-ska': { sets: ['perc'], voicePeakDb: -5.5, trims: { shaker: -4, tamb: -2, cowbell: -3 } },
+
+  // Jungle "sampled break": the crisp club kit pitched up two semitones (like a
+  // sped-up funk break), punched with a fast hard compressor and a touch of crunch.
+  'kit-break': {
+    sets: ['kit-roots', 'perc'],
+    groupSet: 'kit-roots',
+    groupRef: 'kick',
+    groupPeakDb: -1,
+    voicePeakDb: -6.5,
+    pitch: 2,
+    trims: { snare: 2, hatC: -1, ride: -2 },
+    chain: () => [
+      new Tone.Filter({ type: 'highpass', frequency: 45, Q: 0.6 }),
+      new Tone.Filter({ type: 'peaking', frequency: 4800, Q: 0.8, gain: 4 }),
+      new Tone.Compressor({ threshold: -28, ratio: 6, attack: 0.002, release: 0.07, knee: 4 }),
+      new Tone.Distortion({ distortion: 0.3, wet: 0.3 }),
+      new Tone.Filter({ type: 'lowpass', frequency: 12000, Q: 0.5 }),
+      new Tone.Gain(Tone.dbToGain(3)),
+    ],
+  },
+  // Trip-hop "dusty break": the fat vintage kit slowed down, rolled-off top,
+  // boosted lows, tape saturation and slow-release compression.
+  'kit-dusty': {
+    sets: ['kit-twotone', 'perc'],
+    groupSet: 'kit-twotone',
+    groupRef: 'kick',
+    groupPeakDb: 3,
+    voicePeakDb: -7,
+    pitch: -1.5,
+    trims: { snare: 2, hatC: -2, hatO: -3 },
+    chain: () => [
+      new Tone.Filter({ type: 'highpass', frequency: 35, Q: 0.6 }),
+      new Tone.Filter({ type: 'lowshelf', frequency: 100, gain: 4 }),
+      new Tone.Filter({ type: 'lowpass', frequency: 6000, Q: 0.6 }),
+      new Tone.Distortion({ distortion: 0.35, wet: 0.4 }),
+      new Tone.Compressor({ threshold: -24, ratio: 4, attack: 0.008, release: 0.14, knee: 6 }),
+      new Tone.Gain(Tone.dbToGain(1.5)),
+    ],
+  },
+  // Recorded hand percussion; FX voices (risers, impacts, crackle) come from the drum-machine fallback.
+  'perc-jungle': { sets: ['perc'], voicePeakDb: -7, trims: { shaker: -4, congaO: -1, timbH: -2, timbL: -2 } },
+  'perc-trip': { sets: ['perc'], voicePeakDb: -9, trims: { shaker: -5, congaM: -2 } },
+};
+
+/** Classic-mode / fallback stand-ins for presets that only exist as samples. */
+const SYNTH_ALIAS: Record<string, string> = {
+  'kit-break': 'kit-roots',
+  'kit-dusty': 'kit-twotone',
+  'perc-jungle': 'perc-fx',
+  'perc-trip': 'perc-fx',
+  'perc-house': 'perc-fx',
+  'gtr-clean': 'gtr-skank',
+  'horns-trumpet': 'horns-ska',
 };
 
 const SAMPLED_BASS: Record<string, BassSampleDef> = {
@@ -97,9 +152,38 @@ const SAMPLED_GUITAR: Record<string, GuitarSampleDef> = {
   'gtr-ska': { strum: 0.005, up: true, muted: false, maxRing: 0.17, levelDb: -26, releaseGain: 0.3, scratch: 0.055, chain: guitarChain(4, 3200) },
   // Muted chops: fretting hand resting on the strings.
   'gtr-muted': { strum: 0.004, up: false, muted: true, maxRing: 0.05, levelDb: -26, releaseGain: 0.4, scratch: 0.26, chain: guitarChain(2, 2400) },
+  // Clean, ringing guitar with tremolo: cinematic trip-hop twang and arpeggios.
+  'gtr-clean': {
+    strum: 0.012,
+    up: false,
+    muted: false,
+    maxRing: 2.6,
+    levelDb: -23,
+    releaseGain: 0.12,
+    scratch: 0,
+    chain: () => [
+      new Tone.Filter({ type: 'highpass', frequency: 110, Q: 0.6 }),
+      new Tone.Filter({ type: 'peaking', frequency: 1800, Q: 0.9, gain: 3 }),
+      new Tone.Tremolo({ frequency: 4.6, depth: 0.45 }).start(),
+      new Tone.Compressor({ threshold: -22, ratio: 2.5, attack: 0.006, release: 0.15 }),
+    ],
+  },
 };
 
 const SAMPLED_HORNS: Record<string, HornSectionDef> = {
+  // Lone cinematic trumpet, darkened like a muted horn in a smoky room.
+  'horns-trumpet': {
+    melody: [{ player: 'trumpet', shift: 0 }],
+    chordOrder: ['trumpet', 'tenor-sax', 'trombone'],
+    staccatoBelow: 0.18,
+    release: 0.25,
+    chain: () => [
+      new Tone.Filter({ type: 'highpass', frequency: 240, Q: 0.6 }),
+      new Tone.Filter({ type: 'lowpass', frequency: 3200, Q: 0.7 }),
+      new Tone.Compressor({ threshold: -20, ratio: 2.5, attack: 0.01, release: 0.2 }),
+      new Tone.Gain(Tone.dbToGain(5)),
+    ],
+  },
   // Roots: mellow tenor sax with trombone an octave below.
   'horns-roots': {
     melody: [
@@ -138,8 +222,10 @@ export function hasSamples(id: string): boolean {
 }
 
 function createSynth(id: string): Instrument | null {
-  if (KITS[id]) return new DrumKit(id, KITS[id], id.startsWith('perc') ? 0.9 : 1);
-  return createPitched(id);
+  const real = SYNTH_ALIAS[id] ?? id;
+  if (ELECTRO_KITS[real]) return new ElectroKit(id, ELECTRO_KITS[real]);
+  if (KITS[real]) return new DrumKit(id, KITS[real], real.startsWith('perc') ? 0.9 : 1);
+  return createPitched(real) ?? createElectroSynth(real);
 }
 
 /**

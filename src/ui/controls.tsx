@@ -13,7 +13,7 @@ interface KnobProps {
   defaultValue?: number;
 }
 
-/** Drag vertically (or use arrow keys / wheel). Double-click resets. */
+/** Drag vertically, scroll the mouse wheel, or use arrow keys. Hold Shift for fine steps. Double-click resets. */
 export function Knob({ label, value, min = 0, max = 1, onChange, format, color, size = 'md', defaultValue }: KnobProps) {
   const start = useRef<{ y: number; v: number } | null>(null);
   const norm = (value - min) / (max - min);
@@ -45,7 +45,7 @@ export function Knob({ label, value, min = 0, max = 1, onChange, format, color, 
         onPointerUp={() => (start.current = null)}
         onPointerCancel={() => (start.current = null)}
         onDoubleClick={() => defaultValue !== undefined && onChange(defaultValue)}
-        onWheel={(e) => onChange(clamp(value - Math.sign(e.deltaY) * step * 3))}
+        onWheel={(e) => onChange(clamp(value - Math.sign(e.deltaY) * step * (e.shiftKey ? 0.5 : 3)))}
         onKeyDown={(e) => {
           if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
             e.preventDefault();

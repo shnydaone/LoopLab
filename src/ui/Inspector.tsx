@@ -33,7 +33,7 @@ export function Inspector() {
     <div className="panel inspector" style={{ ['--role' as string]: t.color }}>
       <div className="panel-head">
         <h2>
-          <span style={{ color: t.color }}>{ROLE_META[t.role].icon}</span> {t.name}
+          <span style={{ color: t.color }}>{ROLE_META[t.role].icon}</span> {ROLE_META[t.role].name}
         </h2>
         <span className="muted small">Inspector</span>
       </div>
@@ -109,7 +109,16 @@ export function Inspector() {
           <div className="knob-row">
             <Knob label="Volume" value={t.volume} max={1.2} defaultValue={0.8} color={t.color} format={(v) => (v < 0.005 ? '−∞' : `${(20 * Math.log10(v / 0.8)).toFixed(1)}dB`)} onChange={(v) => setTrack(t.id, { volume: v }, true)} />
             <Knob label="Pan" value={t.pan} min={-1} max={1} defaultValue={0} color={t.color} format={panFmt} onChange={(v) => setTrack(t.id, { pan: v }, true)} />
+            <Knob
+              label="Density"
+              value={t.density ?? 1}
+              defaultValue={1}
+              color={t.color}
+              format={pct}
+              onChange={(v) => setTrack(t.id, { density: v }, true)}
+            />
           </div>
+          <p className="muted small">Density thins the part: ghost notes and soft offbeats go first, downbeats and accents stay.</p>
         </section>
 
         <section className="insp-sec">
@@ -118,6 +127,7 @@ export function Inspector() {
             <Knob label="Reverb" value={t.fx.reverb} defaultValue={0} color={t.color} format={pct} onChange={(v) => setFx(t.id, { reverb: v })} />
             <Knob label="Dub echo" value={t.fx.delay} defaultValue={0} color={t.color} format={pct} onChange={(v) => setFx(t.id, { delay: v })} />
             <Knob label="Filter" value={t.fx.filter} defaultValue={1} color={t.color} format={filterFmt} onChange={(v) => setFx(t.id, { filter: v })} />
+            <Knob label="Resonance" value={t.fx.resonance ?? 0} defaultValue={0} color={t.color} format={pct} onChange={(v) => setFx(t.id, { resonance: v })} />
             <Knob label="Drive" value={t.fx.drive} defaultValue={0} color={t.color} format={pct} onChange={(v) => setFx(t.id, { drive: v })} />
           </div>
         </section>
@@ -130,6 +140,8 @@ export function Inspector() {
             <button className="btn" onClick={() => evolveEnergy(-1)}>Energy −</button>
             <button className="btn" onClick={() => evolveEnergy(1)}>Energy +</button>
             <button className="btn" disabled={!playing} onClick={() => engine.queueFill()}>Drum fill</button>
+            <button className="btn" disabled={!playing} onClick={() => engine.queueBuild(2)}>Build ↗</button>
+            <button className="btn" disabled={!playing} onClick={() => engine.queueDrop()}>Drop ⚡</button>
             <button className="btn" disabled={!pattern} onClick={() => mutateTrack(t.id)}>✦ Mutate {t.name}</button>
           </div>
           {lastSeed !== null && <div className="muted small mono">Last seed: {lastSeed.toString(36)}</div>}

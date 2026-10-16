@@ -17,6 +17,8 @@ const SHORTCUTS: [string, string][] = [
   ['M / S / L', 'Mute / solo / lock selected track'],
   ['V', 'Generate a variation of the selected part'],
   ['F', 'Drum fill on the next bar'],
+  ['B / D', 'Build-up (2 bars, then drop) / Drop now'],
+  ['Wheel (+ Shift)', 'Turn a knob (fine steps with Shift)'],
   ['R', 'Remix unlocked parts'],
   ['Shift + S', 'Surprise Me'],
   ['[ / ]', 'Energy down / up'],
@@ -90,6 +92,14 @@ function useShortcuts(onHelp: () => void) {
         case 'f':
         case 'F':
           engine.queueFill();
+          break;
+        case 'b':
+        case 'B':
+          engine.queueBuild(2);
+          break;
+        case 'd':
+        case 'D':
+          engine.queueDrop();
           break;
         case 'r':
         case 'R':

@@ -28,6 +28,21 @@ describe('project serialization', () => {
     expect(validateProject({ ...p, tracks: [] }).ok).toBe(false);
   });
 
+  it('migrates version-1 projects (adds resonance and density)', () => {
+    const p = createProject();
+    const v1 = {
+      ...p,
+      schemaVersion: 1,
+      tracks: p.tracks.map(({ density: _d, fx: { resonance: _r, ...fx }, ...t }) => ({ ...t, fx })),
+    };
+    const res = validateProject(JSON.parse(JSON.stringify(v1)));
+    expect(res.ok, res.ok ? '' : res.error).toBe(true);
+    if (res.ok) {
+      expect(res.project.schemaVersion).toBe(2);
+      expect(res.project.tracks.every((t) => t.density === 1 && t.fx.resonance === 0)).toBe(true);
+    }
+  });
+
   it('leaves current-version documents untouched by migration', () => {
     const p = createProject();
     expect(migrate(p)).toEqual(p);

@@ -1,0 +1,332 @@
+/**
+ * TRIP-HOP — original material, written for LoopLab.
+ * 88 BPM, C minor. Slowed, dusty breaks with the snare sitting far behind
+ * the beat, a deep melodic (real) bassline, tremolo guitar, moody Rhodes,
+ * smoky organ, cinematic strings, a theremin and a lone dark trumpet,
+ * all wrapped in vinyl crackle. Built on space and groove, not density.
+ */
+import type { GenrePack } from '@/music/types';
+import { ch, grid, hit, makePatternFactory, n } from '../dsl';
+
+const PACK = 'trip-hop';
+const P = makePatternFactory({ packId: PACK, genre: 'Trip-Hop', bpm: 88 });
+const SW = 0.35; // MPC-style sixteenth swing on the drums
+const SW_PLAY = 0.2;
+const triad = [0, 2, 4];
+const sev = [0, 2, 4, 6];
+
+export const tripHop: GenrePack = {
+  id: PACK,
+  name: 'Trip-Hop',
+  genre: 'Trip-Hop',
+  family: 'Electronic',
+  description: 'Dusty slowed breaks, deep melodic bass, moody Rhodes, tremolo guitar, theremin, vinyl crackle.',
+  bpm: 88,
+  timeSig: [4, 4],
+  accent: '#e2a46b',
+  harmony: {
+    root: 0,
+    mode: 'minor',
+    progression: [
+      { deg: 0, bars: 2 },
+      { deg: 5, bars: 2 },
+    ],
+  },
+  fills: ['th-fill'],
+  patterns: [
+    // ───────────── DRUMS ─────────────
+    P({
+      id: 'th-drums-dusty',
+      name: 'Dusty Break',
+      role: 'drums',
+      bars: 2,
+      swing: SW,
+      instrument: 'kit-dusty',
+      energy: 3,
+      tags: ['break'],
+      description: 'Big lazy kick pattern, fat backbeat, swung hats and a ghost before the turnaround.',
+      hits: grid({
+        kick: 'X......x..X..... X.x.......X.....',
+        snare: '....X.......X..g ....X......gX...',
+        hatC: 'x.m.x.m.x.m.x.m. x.m.x.m.x.m.x.m.',
+      }),
+    }),
+    P({
+      id: 'th-drums-lazy',
+      name: 'Lazy Half-Time',
+      role: 'drums',
+      bars: 1,
+      swing: SW,
+      instrument: 'kit-dusty',
+      energy: 2,
+      tags: ['half-time'],
+      description: 'Snare on beat 3 only, very few hats: heavy and hypnotic.',
+      hits: grid({ kick: 'X.........x.....', snare: '........X.......', hatC: 'x...m...x...m...' }),
+    }),
+    P({
+      id: 'th-drums-shuffle',
+      name: 'Shuffled Breaks',
+      role: 'drums',
+      bars: 2,
+      swing: 0.5,
+      instrument: 'kit-dusty',
+      energy: 4,
+      tags: ['break'],
+      description: 'Busier kicks and a deep sixteenth shuffle on the hats.',
+      hits: grid({
+        kick: 'X..x..x...X..... X..x......X..x..',
+        snare: '....X.......X... ....X..g....X.g.',
+        hatC: 'xgmgxgmgxgmgxgmg xgmgxgmgxgmgxgmg',
+      }),
+    }),
+    P({
+      id: 'th-drums-808',
+      name: 'Cold 808',
+      role: 'drums',
+      bars: 1,
+      swing: 0.3,
+      instrument: 'dm-808',
+      energy: 2,
+      description: 'Long booming 808 kick, clap on 3, dark hats: the colder, electronic side.',
+      hits: grid({ kick: 'X.........X.....', clap: '........X.......', hatC: 'x.x.x.x.x.x.x.x.' }),
+    }),
+    P({
+      id: 'th-fill',
+      name: 'Dusty Fill',
+      role: 'drums',
+      bars: 1,
+      swing: SW,
+      instrument: 'kit-dusty',
+      energy: 3,
+      tags: ['fill', 'crash-after'],
+      description: 'Groove into a flammed snare and a tumble down the toms.',
+      hits: grid({ kick: 'X.......X.......', snare: '....X......gX.gX', tomH: '..........x.....', tomL: '.............x..' }),
+    }),
+
+    // ───────────── BASS ─────────────
+    P({
+      id: 'th-bass-deep',
+      name: 'Deep Melodic Bass',
+      role: 'bass',
+      bars: 2,
+      swing: SW_PLAY,
+      instrument: 'bass-dub',
+      energy: 3,
+      description: 'A real bass playing a slow, singing minor line.',
+      notes: [
+        n(0, 0, 3.5, 0.9),
+        n(6, 2, 1.5, 0.7),
+        n(8, 4, 3.5, 0.85),
+        n(12, 3, 2, 0.7),
+        n(14, 2, 2, 0.7),
+        n(16, 0, 3.5, 0.9),
+        n(22, -1, 1.5, 0.65),
+        n(24, -3, 5, 0.85),
+        n(30, -2, 2, 0.65),
+      ],
+    }),
+    P({
+      id: 'th-bass-moog',
+      name: 'Moog Glide',
+      role: 'bass',
+      bars: 2,
+      swing: SW_PLAY,
+      instrument: 'trip-bass',
+      energy: 2,
+      description: 'Long synth-bass notes sliding between chord tones.',
+      notes: [n(0, 0, 6, 0.9), n(6, -1, 2, 0.7), n(8, -3, 6, 0.85), n(14, -2, 2, 0.7), n(16, 0, 6, 0.9), n(22, 2, 2, 0.75), n(24, 3, 4, 0.8), n(28, 2, 4, 0.75)],
+    }),
+    P({
+      id: 'th-bass-sub',
+      name: 'Sub Pulse',
+      role: 'bass',
+      bars: 1,
+      swing: 0,
+      instrument: 'sub-bass',
+      energy: 1,
+      tags: ['breakdown'],
+      description: 'Two deep sub notes per bar for breakdowns.',
+      notes: [n(0, 0, 6, 0.9), n(10, 0, 4, 0.8)],
+    }),
+
+    // ───────────── GUITAR / PADS ─────────────
+    P({
+      id: 'th-gtr-twang',
+      name: 'Twang Arpeggio',
+      role: 'guitar',
+      bars: 2,
+      swing: SW_PLAY,
+      instrument: 'gtr-clean',
+      energy: 2,
+      description: 'Ringing, tremolo-drenched guitar arpeggio, cinematic and spaghetti-western.',
+      notes: [n(0, 0, 3, 0.75), n(3, 2, 3, 0.6), n(6, 4, 3, 0.65), n(10, 7, 4, 0.7), n(16, 4, 3, 0.65), n(19, 2, 3, 0.6), n(22, 0, 6, 0.7)],
+    }),
+    P({
+      id: 'th-pad-strings',
+      name: 'Cinematic Strings',
+      role: 'guitar',
+      bars: 4,
+      swing: 0,
+      instrument: 'string-pad',
+      energy: 2,
+      voicing: 'close',
+      description: 'Slow, dark string chords, one per bar.',
+      notes: [0, 16, 32, 48].map((t) => ch(t, triad, 15.6, 0.45)),
+    }),
+
+    // ───────────── KEYS ─────────────
+    P({
+      id: 'th-keys-ep',
+      name: 'Moody Rhodes',
+      role: 'keys',
+      bars: 2,
+      swing: SW_PLAY,
+      instrument: 'trip-ep',
+      energy: 2,
+      voicing: 'close',
+      description: 'Minor-seventh Rhodes chords with long, tremolo tails.',
+      notes: [ch(0, sev, 5.5, 0.55), ch(6, sev, 1.5, 0.4), ch(10, sev, 5, 0.5), ch(16, sev, 7, 0.5), ch(26, sev, 5, 0.45)],
+    }),
+    P({
+      id: 'th-keys-organ',
+      name: 'Smoky Organ',
+      role: 'keys',
+      bars: 2,
+      swing: 0,
+      instrument: 'trip-organ',
+      energy: 1,
+      voicing: 'close',
+      description: 'Held organ chords through a slow Leslie.',
+      notes: [ch(0, triad, 15.5, 0.45), ch(16, triad, 15.5, 0.42)],
+    }),
+
+    // ───────────── LEAD ─────────────
+    P({
+      id: 'th-lead-theremin',
+      name: 'Ghost Theremin',
+      role: 'horns',
+      bars: 4,
+      swing: 0,
+      harmony: 'key',
+      instrument: 'theremin-lead',
+      energy: 2,
+      description: 'An eerie, gliding melody with lots of space.',
+      notes: [n(4, 4, 6, 0.75), n(12, 5, 3, 0.6), n(16, 4, 8, 0.7), n(28, 2, 4, 0.6), n(36, 3, 6, 0.7), n(44, 2, 3, 0.6), n(48, 0, 6, 0.7), n(56, -1, 6, 0.6)],
+    }),
+    P({
+      id: 'th-lead-trumpet',
+      name: 'Smoky Trumpet',
+      role: 'horns',
+      bars: 4,
+      swing: SW_PLAY,
+      harmony: 'key',
+      instrument: 'horns-trumpet',
+      energy: 3,
+      description: 'A lone, darkened trumpet phrase.',
+      notes: [n(2, 4, 3, 0.75), n(6, 6, 2, 0.65), n(8, 7, 6, 0.8), n(18, 6, 2, 0.65), n(20, 4, 6, 0.75), n(34, 3, 3, 0.7), n(38, 2, 2, 0.6), n(40, 0, 8, 0.75), n(52, -1, 4, 0.65), n(56, 0, 6, 0.7)],
+    }),
+
+    // ───────────── PERCUSSION / FX ─────────────
+    P({
+      id: 'th-perc-vinyl',
+      name: 'Vinyl & Shaker',
+      role: 'perc',
+      bars: 1,
+      swing: SW,
+      instrument: 'perc-trip',
+      energy: 1,
+      description: 'Constant vinyl crackle under a soft shaker.',
+      hits: [hit('crackle', 0, 0.8), ...grid({ shaker: '..m...m...m...m.' })],
+    }),
+    P({
+      id: 'th-perc-hand',
+      name: 'Hand Percussion',
+      role: 'perc',
+      bars: 2,
+      swing: SW,
+      instrument: 'perc-trip',
+      energy: 2,
+      hits: [
+        hit('crackle', 0, 0.7),
+        hit('crackle', 16, 0.7),
+        ...grid({
+          congaM: 'x.....x...x..... x.....x.....x...',
+          congaO: '...x.......x..x. ...x......x.....',
+          shaker: 'g.m.g.m.g.m.g.m. g.m.g.m.g.m.g.m.',
+        }),
+      ],
+    }),
+    P({
+      id: 'th-fx-swells',
+      name: 'Reverse Swells',
+      role: 'perc',
+      bars: 4,
+      swing: 0,
+      instrument: 'perc-trip',
+      energy: 1,
+      tags: ['fx'],
+      description: 'Crackle with a reverse cymbal swelling into each new phrase.',
+      hits: [hit('crackle', 0, 0.7), hit('crackle', 16, 0.7), hit('crackle', 32, 0.7), hit('crackle', 48, 0.7), hit('revcrash', 28, 0.6), hit('revcrash', 60, 0.8)],
+    }),
+  ],
+  sections: [
+    {
+      id: 'intro',
+      kind: 'intro',
+      name: 'Intro',
+      progression: [{ deg: 0, bars: 4 }],
+      parts: { drums: null, bass: null, guitar: 'th-gtr-twang', keys: 'th-keys-ep', horns: null, perc: 'th-perc-vinyl' },
+    },
+    {
+      id: 'verse',
+      kind: 'verse',
+      name: 'Main Groove A',
+      progression: [
+        { deg: 0, bars: 2 },
+        { deg: 5, bars: 2 },
+      ],
+      parts: { drums: 'th-drums-dusty', bass: 'th-bass-deep', guitar: 'th-gtr-twang', keys: 'th-keys-ep', horns: null, perc: 'th-perc-hand' },
+    },
+    {
+      id: 'bridge',
+      kind: 'bridge',
+      name: 'Main Groove B',
+      progression: [
+        { deg: 3, bars: 2 },
+        { deg: 0, bars: 2 },
+      ],
+      parts: { drums: 'th-drums-lazy', bass: 'th-bass-moog', guitar: 'th-pad-strings', keys: 'th-keys-organ', horns: 'th-lead-theremin', perc: 'th-perc-vinyl' },
+    },
+    {
+      id: 'chorus',
+      kind: 'chorus',
+      name: 'Chorus',
+      progression: [
+        { deg: 5, bars: 1 },
+        { deg: 6, bars: 1 },
+        { deg: 0, bars: 2 },
+      ],
+      parts: { drums: 'th-drums-shuffle', bass: 'th-bass-deep', guitar: 'th-pad-strings', keys: 'th-keys-ep', horns: 'th-lead-trumpet', perc: 'th-perc-hand' },
+    },
+    {
+      id: 'breakdown',
+      kind: 'breakdown',
+      name: 'Breakdown',
+      progression: [
+        { deg: 3, bars: 2 },
+        { deg: 4, bars: 2 },
+      ],
+      parts: { drums: null, bass: 'th-bass-sub', guitar: 'th-pad-strings', keys: 'th-keys-organ', horns: 'th-lead-theremin', perc: 'th-fx-swells' },
+    },
+    {
+      id: 'outro',
+      kind: 'outro',
+      name: 'Outro',
+      progression: [
+        { deg: 0, bars: 2 },
+        { deg: 5, bars: 2 },
+      ],
+      parts: { drums: 'th-drums-lazy', bass: 'th-bass-moog', guitar: 'th-gtr-twang', keys: 'th-keys-organ', horns: 'th-lead-trumpet', perc: 'th-perc-vinyl' },
+    },
+  ],
+};

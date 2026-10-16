@@ -24,6 +24,9 @@ export interface LiveState {
   progStart: number;
   harmonyPending: boolean;
   fillQueued: boolean;
+  building: boolean;
+  buildQueued: boolean;
+  dropQueued: boolean;
   tracks: Record<string, LiveTrack>;
   error: string | null;
   /** 'sampled' = recorded instruments where available, 'synth' = original synths (A/B). */
@@ -49,6 +52,9 @@ export const liveStore = createStore<LiveState>(() => ({
   progStart: 0,
   harmonyPending: false,
   fillQueued: false,
+  building: false,
+  buildQueued: false,
+  dropQueued: false,
   tracks: {},
   error: null,
   soundMode: initialSoundMode(),

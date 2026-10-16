@@ -9,6 +9,7 @@ import * as Tone from 'tone';
 import { getBuiltinPattern, getPack } from '@/content/library';
 import { effectiveHarmony, feelFactor, resolveNote, type CompatMode } from '@/music/compat';
 import { compilePattern, eventsInWindow, type CompiledPattern } from '@/music/pattern';
+import { buildRollPattern } from '@/music/builds';
 import { chordAt, nextBarChord } from '@/music/theory';
 import type { Harmony, Pattern, Role } from '@/music/types';
 import { STEPS_PER_BAR } from '@/music/types';
@@ -18,6 +19,8 @@ import { createInstrument } from './instruments/presets';
 import type { Instrument } from './instruments/types';
 import { liveStore, type LiveTrack, type SoundMode } from './live';
 import { timingOffset, velocityFor } from './feel';
+import { keepAtDensity } from '@/music/density';
+import { ELECTRO_KITS, ElectroKit } from './instruments/electroKit';
 
 interface ActivePart {
   pattern: Pattern;
@@ -145,6 +148,7 @@ class TrackRuntime {
     this.channel.mute = s.mute;
     this.channel.solo = s.solo;
     this.filter.frequency.rampTo(filterHz(s.fx.filter), r);
+    this.filter.Q.rampTo(0.7 + (s.fx.resonance ?? 0) * 11, r);
     this.drive.wet.rampTo(s.fx.drive * 0.8, r);
     this.revSend.gain.rampTo(s.fx.reverb, r);
     this.dlySend.gain.rampTo(s.fx.delay, r);
@@ -186,6 +190,11 @@ export class AudioEngine {
   private delay!: Tone.FeedbackDelay;
   private drumBus!: Tone.Gain;
   private roomIn!: Tone.Gain;
+  private macroHP!: Tone.Filter;
+  private fx!: ElectroKit;
+  private buildQueued: { bars: number } | null = null;
+  private build: { start: number; end: number } | null = null;
+  private dropQueued = false;
 
   get isReady() {
     return this.initialised;
@@ -208,7 +217,12 @@ export class AudioEngine {
       this.masterVol = new Tone.Volume(0);
       this.masterMeter = new Tone.Meter({ smoothing: 0.8 });
       this.analyser = new Tone.Analyser('fft', 64);
-      this.masterIn.chain(subCut, comp, limiter, this.masterVol, Tone.getDestination());
+      // Build-up filter: a high-pass that sweeps up during a build and snaps open on the drop.
+      this.macroHP = new Tone.Filter({ type: 'highpass', frequency: 20, Q: 0.9, rolloff: -24 });
+      this.masterIn.chain(this.macroHP, subCut, comp, limiter, this.masterVol, Tone.getDestination());
+      // Engine-owned FX box for risers/impacts, so builds work in every genre.
+      this.fx = new ElectroKit('fx-bus', ELECTRO_KITS['perc-fx']);
+      this.fx.output.connect(new Tone.Gain(0.8).connect(subCut));
       this.masterVol.connect(this.masterMeter);
       this.masterVol.connect(this.analyser);
 
@@ -399,6 +413,12 @@ export class AudioEngine {
     transport.stop();
     this.playing = false;
     this.fillQueued = false;
+    this.build = null;
+    this.buildQueued = null;
+    this.dropQueued = false;
+    this.macroHP.frequency.cancelScheduledValues(Tone.now());
+    this.macroHP.frequency.setValueAtTime(20, Tone.now());
+    this.fx.releaseAll(Tone.now());
     for (const rt of this.tracks.values()) {
       rt.releaseAll();
       rt.fill = null;
@@ -487,6 +507,21 @@ export class AudioEngine {
         this.startFill(g, bpm);
         changed = true;
       }
+      // Build-ups and drops land on bar lines.
+      if (this.build && (g >= this.build.end || this.dropQueued)) {
+        this.doDrop(time);
+        changed = true;
+      } else if (this.dropQueued) {
+        this.dropQueued = false;
+        this.fx.hit('impact', 1, time);
+        this.drumsTrack()?.inst?.hit?.('crash', 0.85, time);
+        changed = true;
+      }
+      if (this.buildQueued && !this.build) {
+        this.startBuild(g, time, stepSec, bpm, this.buildQueued.bars);
+        this.buildQueued = null;
+        changed = true;
+      }
     }
 
     const harmony = this.harmony ?? this.project.harmony;
@@ -499,7 +534,9 @@ export class AudioEngine {
       if (evs.length === 0) continue;
       const pack = getPack(pattern.packId);
       const th = effectiveHarmony(this.compat(), harmony, pack?.harmony);
+      const density = rt.fill ? 1 : (rt.state.density ?? 1);
       for (const { ev, rel } of evs) {
+        if (!keepAtDensity(density, ev.t, ev.hit?.v ?? ev.note?.v ?? 0.8)) continue;
         // Each genre's players sit differently against the beat (see feel.ts).
         const offset = timingOffset(pattern.packId, pattern.role, ev.hit?.voice);
         const when = Math.max(time - 0.02, time + rel * k * stepSec + offset);
@@ -533,6 +570,53 @@ export class AudioEngine {
       liveStore.setState({ step: g, progStart: this.progStart });
       if (changed) this.publish();
     }, time);
+  }
+
+  private drumsTrack() {
+    return [...this.tracks.values()].find((rt) => rt.state.role === 'drums');
+  }
+
+  /** Two (or four) bars of tension: high-pass sweep, riser, accelerating snare roll. */
+  private startBuild(g: number, time: number, stepSec: number, bpm: number, bars: number) {
+    const len = bars * 16 * stepSec;
+    this.build = { start: g, end: g + bars * 16 };
+    const f = this.macroHP.frequency;
+    f.cancelScheduledValues(time);
+    f.setValueAtTime(20, time);
+    f.exponentialRampToValueAtTime(900, time + len);
+    this.fx.riser(time, len, 0.9);
+    const drums = this.drumsTrack();
+    if (drums?.inst) {
+      const p = buildRollPattern(bars, bpm, drums.instId ?? 'dm-909');
+      drums.fill = { pattern: p, cp: compilePattern(p), start: g, k: 1, end: g + bars * 16, crash: false };
+    }
+  }
+
+  /** The drop: filter snaps open, impact + crash on the downbeat, groove returns. */
+  private doDrop(time: number) {
+    const f = this.macroHP.frequency;
+    f.cancelScheduledValues(time);
+    f.setValueAtTime(20, time);
+    this.fx.hit('impact', 1, time);
+    const drums = this.drumsTrack();
+    if (drums?.fill?.pattern.tags.includes('build')) drums.fill = null;
+    drums?.inst?.hit?.('crash', 0.9, time);
+    this.build = null;
+    this.dropQueued = false;
+  }
+
+  /** Start a build-up on the next bar (it drops automatically after `bars`). */
+  queueBuild(bars = 2) {
+    if (!this.playing || this.build) return;
+    this.buildQueued = { bars };
+    this.publish();
+  }
+
+  /** Drop now (next bar): ends a build early, or just hits the impact. */
+  queueDrop() {
+    if (!this.playing) return;
+    this.dropQueued = true;
+    this.publish();
   }
 
   private errorCounts = new Map<string, number>();
@@ -572,6 +656,9 @@ export class AudioEngine {
       tracks,
       harmonyPending: !!this.pendingHarmony,
       fillQueued: this.fillQueued,
+      building: !!this.build,
+      buildQueued: !!this.buildQueued,
+      dropQueued: this.dropQueued,
     });
   }
 

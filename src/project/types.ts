@@ -1,7 +1,8 @@
 import type { CompatMode } from '@/music/compat';
 import type { Harmony, Pattern, Role } from '@/music/types';
 
-export const SCHEMA_VERSION = 1;
+/** v2: per-track filter resonance and pattern density. */
+export const SCHEMA_VERSION = 2;
 
 export type Quantize = 'beat' | 'bar' | '2bar' | '4bar';
 
@@ -18,6 +19,8 @@ export interface TrackFx {
   delay: number;
   /** 0..1 low-pass position (1 = fully open). */
   filter: number;
+  /** 0..1 filter resonance (emphasis at the cutoff). */
+  resonance: number;
   /** 0..1 drive amount. */
   drive: number;
 }
@@ -36,6 +39,8 @@ export interface TrackState {
   mute: boolean;
   solo: boolean;
   locked: boolean;
+  /** 0..1 pattern density: below 1, the quietest/least important events are thinned out. */
+  density: number;
   fx: TrackFx;
 }
 

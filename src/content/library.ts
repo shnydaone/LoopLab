@@ -4,15 +4,30 @@
  * (browser, Surprise Me, compatibility) picks them up automatically.
  */
 import type { GenrePack, Pattern, Role } from '@/music/types';
+import { classicHouse } from './packs/classicHouse';
 import { dub } from './packs/dub';
+import { jungle } from './packs/jungle';
+import { tripHop } from './packs/tripHop';
 import { kingstonSka } from './packs/kingstonSka';
 import { rocksteady } from './packs/rocksteady';
 import { rootsReggae } from './packs/rootsReggae';
 import { steppers } from './packs/steppers';
 import { twoToneSka } from './packs/twoToneSka';
 
-/** Ordered roughly by family and history: ska → rocksteady → reggae styles. */
-export const PACKS: GenrePack[] = [rootsReggae, steppers, dub, rocksteady, kingstonSka, twoToneSka];
+/** Grouped by family; the browser filters by `family`. */
+export const PACKS: GenrePack[] = [
+  rootsReggae,
+  steppers,
+  dub,
+  rocksteady,
+  kingstonSka,
+  twoToneSka,
+  jungle,
+  tripHop,
+  classicHouse,
+];
+
+export const FAMILIES = Array.from(new Set(PACKS.map((p) => p.family)));
 
 const packById = new Map(PACKS.map((p) => [p.id, p]));
 const builtinPatterns = new Map<string, Pattern>();

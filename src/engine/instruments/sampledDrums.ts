@@ -21,6 +21,10 @@ export interface KitSampleDef {
   voicePeakDb?: number;
   /** Fine trims in dB per voice, applied after normalisation. */
   trims?: Partial<Record<DrumVoice, number>>;
+  /** Whole-kit pitch in semitones (e.g. +2 for a sped-up sampled break). */
+  pitch?: number;
+  /** Processing after the kit (the "break processor": EQ, crunch, compression). */
+  chain?: () => Tone.ToneAudioNode[];
 }
 
 interface LiveVoice {
@@ -31,6 +35,8 @@ interface LiveVoice {
 export class SampledKit implements Instrument {
   readonly output = new Tone.Gain(1);
   readonly mono = false;
+  private input = new Tone.Gain(1);
+  private chainNodes: Tone.ToneAudioNode[] = [];
   private voices = new Map<string, DrumVoiceSamples & { gain: number }>();
   private buffers = new Map<string, AudioBuffer>();
   private ready = false;
@@ -43,6 +49,9 @@ export class SampledKit implements Instrument {
     private def: KitSampleDef,
     private fallback: Instrument | null,
   ) {
+    this.chainNodes = def.chain?.() ?? [];
+    if (this.chainNodes.length) this.input.chain(...this.chainNodes, this.output);
+    else this.input.connect(this.output);
     if (fallback) fallback.output.connect(this.output);
     void this.load();
   }
@@ -85,11 +94,11 @@ export class SampledKit implements Instrument {
 
   hit(voice: DrumVoice, velocity: number, time: number) {
     let v: string = voice;
-    let rate = 1;
+    let rate = semitonesToRate(this.def.pitch ?? 0);
     if (voice === 'snare' && velocity >= 0.93 && this.voices.has('rimshot')) v = 'rimshot';
     if (voice === 'tomM') {
       v = 'tomH';
-      rate = semitonesToRate(-3);
+      rate *= semitonesToRate(-3);
     }
     const vs = this.voices.get(v);
     if (!this.ready || !vs) {
@@ -110,7 +119,7 @@ export class SampledKit implements Instrument {
     const gain = ctx.createGain();
     gain.gain.value = vs.gain * velocityGain(velocity);
     src.connect(gain);
-    Tone.connect(gain, this.output);
+    Tone.connect(gain, this.input);
     const start = Math.max(time, ctx.currentTime);
     src.start(start);
     const lv: LiveVoice = { src, gain };
@@ -138,6 +147,8 @@ export class SampledKit implements Instrument {
   dispose() {
     this.disposed = true;
     this.fallback?.dispose();
+    for (const n of this.chainNodes) n.dispose();
+    this.input.dispose();
     this.output.dispose();
   }
 }

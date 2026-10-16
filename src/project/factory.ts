@@ -7,19 +7,19 @@ import { SCHEMA_VERSION } from './types';
 export const ROLE_META: Record<Role, { name: string; color: string; icon: string }> = {
   drums: { name: 'Drums', color: '#ff7a45', icon: '◉' },
   bass: { name: 'Bass', color: '#ffc53d', icon: '◢' },
-  guitar: { name: 'Guitar', color: '#3df5c4', icon: '≋' },
+  guitar: { name: 'Guitar / Pad', color: '#3df5c4', icon: '≋' },
   keys: { name: 'Keys', color: '#8ea2ff', icon: '▤' },
-  horns: { name: 'Horns', color: '#ff5fa2', icon: '◣' },
+  horns: { name: 'Horns / Lead', color: '#ff5fa2', icon: '◣' },
   perc: { name: 'Perc / FX', color: '#b37bff', icon: '✦' },
 };
 
 const DEFAULT_FX: Record<Role, TrackState['fx']> = {
-  drums: { reverb: 0.08, delay: 0, filter: 1, drive: 0 },
-  bass: { reverb: 0, delay: 0, filter: 1, drive: 0 },
-  guitar: { reverb: 0.22, delay: 0.08, filter: 1, drive: 0 },
-  keys: { reverb: 0.2, delay: 0, filter: 1, drive: 0 },
-  horns: { reverb: 0.3, delay: 0.1, filter: 1, drive: 0 },
-  perc: { reverb: 0.15, delay: 0.28, filter: 1, drive: 0 },
+  drums: { reverb: 0.08, delay: 0, filter: 1, resonance: 0, drive: 0 },
+  bass: { reverb: 0, delay: 0, filter: 1, resonance: 0, drive: 0 },
+  guitar: { reverb: 0.22, delay: 0.08, filter: 1, resonance: 0, drive: 0 },
+  keys: { reverb: 0.2, delay: 0, filter: 1, resonance: 0, drive: 0 },
+  horns: { reverb: 0.3, delay: 0.1, filter: 1, resonance: 0, drive: 0 },
+  perc: { reverb: 0.15, delay: 0.28, filter: 1, resonance: 0, drive: 0 },
 };
 
 const DEFAULT_PAN: Record<Role, number> = { drums: 0, bass: 0, guitar: -0.3, keys: 0.28, horns: 0.12, perc: -0.15 };
@@ -42,6 +42,7 @@ export function defaultTracks(pack: GenrePack, sectionId = 'verse'): TrackState[
     mute: false,
     solo: false,
     locked: false,
+    density: 1,
     fx: { ...DEFAULT_FX[role] },
   }));
 }

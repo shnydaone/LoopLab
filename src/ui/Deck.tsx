@@ -96,7 +96,7 @@ function TrackCard({ t, index }: { t: TrackState; index: number }) {
       <header className="tc-head">
         <span className="tc-icon" aria-hidden>{meta.icon}</span>
         <div className="tc-title">
-          <span className="tc-name">{t.name}</span>
+          <span className="tc-name">{meta.name}</span>
           <span className="tc-inst">{inst ?? 'No instrument'}</span>
         </div>
         <span className="tc-key mono" title="Keyboard: select track">{index + 1}</span>

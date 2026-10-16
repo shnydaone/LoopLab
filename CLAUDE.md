@@ -118,6 +118,35 @@ scripts/samples/pitch.mjs      pitch detection used to verify bass note mapping
 - **Player feel** (`engine/feel.ts`): per-genre timing offsets + human jitter (roots reggae
   snare/hats/skank/bass lay back 5–12 ms; two-tone pushes 2–3 ms) and velocity spread.
 
+### Electronic engine (Stage A: Jungle, Trip-Hop, Classic House)
+
+- **Drum machines** (`engine/instruments/electroKit.ts`, presets `dm-909`, `dm-808`, `perc-fx`):
+  analog-style models built per hit from Web Audio nodes: pitch-drop sine kick + click, triangle
+  + noise snare, multi-burst clap, an always-running 6-square 808 metal bank feeding hat/cymbal
+  VCAs (closed hat chokes open), toms/congas/cowbell/claves, and FX voices `riser`, `downer`,
+  `impact`, `revcrash`, `crackle`, `zap`, `siren`. Kit bus = drive + glue compressor.
+- **Break kits** (`kit-break`, `kit-dusty`): SampledKit with `pitch` (whole-kit semitones) and a
+  `chain` "break processor" (jungle: +2 st, hard fast compression, crunch; trip-hop: −1.5 st,
+  6 kHz roll-off, low boost, tape drive). Breaks are programmed hit-by-hit (`tags: ['break']`),
+  never loops; the ✦ variation button runs `chopBreak()` (8th-slice re-sequencing, stutters,
+  32nd snare-roll splice, bar downbeats preserved).
+- **Synths** (`engine/instruments/synths.ts`): sub, Reese, house pulse bass, organ bass, Moog-ish
+  bass, FM house piano, stab organ, smoky organ, moody Rhodes, supersaw pad, synth strings,
+  theremin, mono lead. `BassInst` now takes an effects chain. Sampled extras: `gtr-clean`
+  (tremolo guitar), `horns-trumpet` (lone dark trumpet).
+- **Classic-mode stand-ins**: `SYNTH_ALIAS` in `presets.ts` maps sample-only presets to synths.
+- **Build/Drop** (engine): `queueBuild(bars)` starts on the next bar: master `macroHP` high-pass
+  sweeps 20→900 Hz, the engine-owned FX box plays a riser of the exact build length, drums play
+  `buildRollPattern()` (8ths→16ths→32nds crescendo); at the end (or `queueDrop()`) the filter
+  snaps open with an impact + crash on the downbeat. UI: Build/Drop pads, Inspector buttons, B / D keys.
+- **Density** (`music/density.ts`): per-track 0..1; events below an importance threshold
+  (velocity + on-beat bonus) are skipped, so ghosts go first. **Resonance**: per-track filter Q.
+  Both live in project schema v2 (migration 1→2 in `schema.ts`).
+- Track roles double up for electronic parts: `guitar` = "Guitar / Pad", `horns` = "Horns / Lead".
+- Measure levels in **Studio** mode (Sound switch); Classic uses the synth stand-ins. The sound-mode
+  preference is per browser (localStorage), so check it before trusting meter readings.
+- Vite watches with polling (`vite.config.ts`) because the native Windows watcher missed edits.
+
 ### Adding a genre pack
 
 1. Create `src/content/packs/<name>.ts` using the DSL in `content/dsl.ts`
@@ -177,6 +206,9 @@ at full tempo, so their chops sit on every eighth-note "and" (2, 6, 10, 14). An 
   organs, player feel, mix glue, Studio/Classic A/B. Still synthesised: Bright Keys (FM piano),
   Tine EP, dub siren, claps. Next: Eric's listening review, then piano/EP samples
   (e.g. Salamander/VSCO upright, jRhodes — check licences) and per-instrument polish.
+- **Electronic collection** — Stage A done (Old-School Jungle 165, Trip-Hop 88, Classic House 124),
+  awaiting Eric's audition. Stage B next: Acid House (expressive 303-style bass with filter/accent/
+  slide), Old-School Rave, Breakbeat Hardcore, Happy Hardcore, Hardcore Techno/Gabber.
 - **Phase 2: Groove library & playground** — rock, funk, punk, hip-hop, pop, electronic,
   synthwave, jazz packs; One Drop / Rockers / Steppers / Dub / Dancehall sub-packs; trad ska,
   ska-punk, rocksteady; mood/energy filters for Surprise Me; key/chord compatibility scoring;

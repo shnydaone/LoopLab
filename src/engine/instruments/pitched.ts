@@ -38,11 +38,17 @@ export class BassInst extends BaseInst {
     opts: ConstructorParameters<typeof Tone.MonoSynth>[0],
     subLevel = 0,
     drive = 0,
+    chain: Tone.ToneAudioNode[] = [],
   ) {
     super(id, level);
     let dest: Tone.ToneAudioNode = this.output;
+    if (chain.length) {
+      for (const c of chain) this.track(c);
+      chain[0].chain(...chain.slice(1), this.output);
+      dest = chain[0];
+    }
     if (drive > 0) {
-      dest = this.track(new Tone.Distortion({ distortion: drive, wet: 0.35 }).connect(this.output));
+      dest = this.track(new Tone.Distortion({ distortion: drive, wet: 0.35 }).connect(dest));
     }
     this.synth = this.track(new Tone.MonoSynth(opts).connect(dest));
     if (subLevel > 0) {

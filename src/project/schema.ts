@@ -65,10 +65,12 @@ const track = z.object({
   mute: z.boolean(),
   solo: z.boolean(),
   locked: z.boolean(),
+  density: z.number().min(0).max(1),
   fx: z.object({
     reverb: z.number().min(0).max(1),
     delay: z.number().min(0).max(1),
     filter: z.number().min(0).max(1),
+    resonance: z.number().min(0).max(1),
     drive: z.number().min(0).max(1),
   }),
 });
@@ -108,7 +110,19 @@ export const projectSchema = z.object({
 type Migration = (raw: Record<string, unknown>) => Record<string, unknown>;
 
 /** MIGRATIONS[n] upgrades a version-n document to version n+1. */
-const MIGRATIONS: Record<number, Migration> = {};
+const MIGRATIONS: Record<number, Migration> = {
+  // v1 → v2: add filter resonance and pattern density to every track.
+  1: (doc) => ({
+    ...doc,
+    tracks: Array.isArray(doc.tracks)
+      ? doc.tracks.map((t: Record<string, unknown>) => ({
+          ...t,
+          density: typeof t.density === 'number' ? t.density : 1,
+          fx: { resonance: 0, ...((t.fx as Record<string, unknown>) ?? {}) },
+        }))
+      : doc.tracks,
+  }),
+};
 
 export function migrate(raw: unknown): unknown {
   if (!raw || typeof raw !== 'object') return raw;

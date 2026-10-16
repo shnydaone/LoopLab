@@ -53,6 +53,30 @@ export const FEELS: Record<string, FeelProfile> = {
     jitter: 3,
     velSpread: 0.07,
   },
+  // Jungle breaks push slightly; everything else sits on the grid.
+  jungle: {
+    drums: { snare: -2, hatC: 1 },
+    drumJitter: 2.5,
+    roles: { bass: 0, guitar: 0, keys: 3, horns: 3 },
+    jitter: 2,
+    velSpread: 0.06,
+  },
+  // Trip-hop is drunk and heavy: the snare lands far behind the beat.
+  'trip-hop': {
+    drums: { snare: 14, clap: 12, hatC: 8, hatO: 8, kick: 3 },
+    drumJitter: 5,
+    roles: { bass: 10, guitar: 8, keys: 10, horns: 12 },
+    jitter: 4,
+    velSpread: 0.1,
+  },
+  // Drum machines are tight; the bass pushes a hair ahead.
+  'classic-house': {
+    drums: { clap: 2 },
+    drumJitter: 1,
+    roles: { bass: -2, guitar: 0, keys: 0, horns: 0 },
+    jitter: 1.5,
+    velSpread: 0.04,
+  },
   'two-tone-ska': {
     drums: { snare: -3, hatC: -2, hatO: -2, ride: -2 },
     drumJitter: 2,

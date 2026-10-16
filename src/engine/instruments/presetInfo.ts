@@ -17,6 +17,30 @@ export const PRESETS: PresetInfo[] = [
   { id: 'horns-ska', name: 'Ska Horns', role: 'horns', kind: 'pitched', description: 'Bright trumpet-led section in octaves.', sampled: 'Real trumpet + tenor sax in unison, trombone an octave below (VSCO 2 CE, VCSL); chords voiced across the section' },
   { id: 'perc-roots', name: 'Roots Percussion', role: 'perc', kind: 'drum', description: 'Hand drums, shaker and dub siren.', sampled: 'Virtuosity Drums hand percussion (tumba, bongos, shaker, claves); the dub siren stays synthesised' },
   { id: 'perc-ska', name: 'Ska Percussion', role: 'perc', kind: 'drum', description: 'Tambourine, claps and cowbell.', sampled: 'Virtuosity Drums tambourine, cowbell and shaker; claps stay synthesised' },
+
+  // ───── electronic ─────
+  { id: 'kit-break', name: 'Jungle Break Kit', role: 'drums', kind: 'drum', description: 'Sampled-break sound: crisp kit pitched up, smashed compression, crunch.', sampled: 'Virtuosity Drums (CC0) through a break processor: +2 semitones, hard fast compression, saturation' },
+  { id: 'kit-dusty', name: 'Dusty Break Kit', role: 'drums', kind: 'drum', description: 'Slowed, rolled-off, tape-saturated vintage kit for trip-hop.', sampled: 'Big Rusty Drums (CC0), −1.5 semitones, low boost, 6 kHz roll-off, tape drive, slow compression' },
+  { id: 'dm-909', name: 'Drum Machine 909', role: 'drums', kind: 'drum', description: 'Modelled 909-style machine: punchy pitch-drop kick, noise snare, layered clap, metallic hats.' },
+  { id: 'dm-808', name: 'Drum Machine 808', role: 'drums', kind: 'drum', description: 'Modelled 808-style machine: long booming kick, soft snare, dark hats.' },
+  { id: 'perc-jungle', name: 'Jungle Percussion', role: 'perc', kind: 'drum', description: 'Congas, timbales, shaker plus risers, impacts and sirens.', sampled: 'Virtuosity hand percussion (CC0) + synthesised FX' },
+  { id: 'perc-trip', name: 'Trip-Hop Percussion', role: 'perc', kind: 'drum', description: 'Soft hand percussion and vinyl crackle.', sampled: 'Virtuosity hand percussion (CC0) + synthesised vinyl crackle' },
+  { id: 'perc-house', name: 'House Percussion', role: 'perc', kind: 'drum', description: 'Machine shaker, tambourine, congas, cowbell, claps and FX.' },
+  { id: 'sub-bass', name: 'Sub Bass', role: 'bass', kind: 'pitched', description: 'Deep sine sub with glide.' },
+  { id: 'reese-bass', name: 'Reese Bass', role: 'bass', kind: 'pitched', description: 'Detuned beating saws with a filter swell and sub: the jungle growl.' },
+  { id: 'house-bass', name: 'House Synth Bass', role: 'bass', kind: 'pitched', description: 'Plucky pulse bass with a resonant filter snap.' },
+  { id: 'organ-bass', name: 'Organ Bass', role: 'bass', kind: 'pitched', description: 'Round, percussive early-90s house organ bass.' },
+  { id: 'trip-bass', name: 'Moog-Style Bass', role: 'bass', kind: 'pitched', description: 'Warm saw bass with glide and a slow filter.' },
+  { id: 'atmos-pad', name: 'Atmos Pad', role: 'guitar', kind: 'pitched', description: 'Wide, slow supersaw atmosphere.' },
+  { id: 'string-pad', name: 'Synth Strings', role: 'guitar', kind: 'pitched', description: 'Chorused string machine with gentle vibrato.' },
+  { id: 'gtr-clean', name: 'Tremolo Guitar', role: 'guitar', kind: 'pitched', description: 'Clean ringing guitar through tremolo.', sampled: 'Emilyguitar (CC0), long ring, tremolo, no damping' },
+  { id: 'house-piano', name: 'House Piano', role: 'keys', kind: 'pitched', description: 'Bright FM stab piano.' },
+  { id: 'house-organ', name: 'House Organ', role: 'keys', kind: 'pitched', description: 'Percussive full-drawbar stab organ, no Leslie, driven.' },
+  { id: 'trip-organ', name: 'Smoky Organ', role: 'keys', kind: 'pitched', description: 'Dark low-drawbar organ with slow Leslie.' },
+  { id: 'trip-ep', name: 'Moody Rhodes', role: 'keys', kind: 'pitched', description: 'Soft tine EP with deep tremolo and tape drive.' },
+  { id: 'theremin-lead', name: 'Theremin', role: 'horns', kind: 'pitched', description: 'Gliding sine with wide vibrato.' },
+  { id: 'mono-lead', name: 'Mono Synth Lead', role: 'horns', kind: 'pitched', description: 'Detuned saw lead with a plucky filter.' },
+  { id: 'horns-trumpet', name: 'Cinematic Trumpet', role: 'horns', kind: 'pitched', description: 'A lone, darkened trumpet.', sampled: 'VSCO 2 CE trumpet (CC0), darkened like a muted horn' },
 ];
 
 export const presetById = new Map(PRESETS.map((p) => [p.id, p]));

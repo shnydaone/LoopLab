@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { PACKS, allBuiltinPatterns } from '@/content/library';
+import { FAMILIES, PACKS, allBuiltinPatterns } from '@/content/library';
+import { usePref } from './hooks';
 import { keyName } from '@/music/theory';
 import type { Pattern, Role } from '@/music/types';
 import { ROLES } from '@/music/types';
@@ -79,29 +80,41 @@ function PartRow({ p }: { p: Pattern }) {
 export function Browser() {
   const [query, setQuery] = useState('');
   const [role, setRole] = useState<Role | 'all'>('all');
+  const [family, setFamily] = usePref<string>('browser-family', 'All');
   const userPatterns = useStore((s) => s.project.userPatterns);
+  const visiblePacks = PACKS.filter((p) => family === 'All' || p.family === family);
   const parts = useMemo(() => {
     const q = query.trim().toLowerCase();
+    const packIds = new Set(visiblePacks.map((p) => p.id));
     return [...allBuiltinPatterns(), ...userPatterns].filter(
       (p) =>
         !p.tags.includes('fill') &&
+        (family === 'All' || packIds.has(p.packId)) &&
         (role === 'all' || p.role === role) &&
         (!q || `${p.name} ${p.genre} ${p.tags.join(' ')} ${p.role}`.toLowerCase().includes(q)),
     );
-  }, [query, role, userPatterns]);
+  }, [query, role, userPatterns, family, visiblePacks]);
 
   return (
     <div className="panel browser">
       <div className="panel-head">
         <h2>Grooves</h2>
-        <span className="muted small">{PACKS.length} packs</span>
+        <span className="muted small">{visiblePacks.length} of {PACKS.length} packs</span>
       </div>
       <div className="panel-scroll">
+        <div className="family-filter" role="group" aria-label="Genre family">
+          {['All', ...FAMILIES].map((f) => (
+            <button key={f} className={family === f ? 'on' : ''} onClick={() => setFamily(f)}>
+              {f}
+              <span className="count">{f === 'All' ? PACKS.length : PACKS.filter((p) => p.family === f).length}</span>
+            </button>
+          ))}
+        </div>
         <div className="pack-list">
-          {PACKS.map((p) => (
+          {visiblePacks.map((p) => (
             <PackCard key={p.id} packId={p.id} />
           ))}
-          <div className="pack-soon">More genres are on the roadmap: rock, funk, hip-hop, electronic and more.</div>
+          <div className="pack-soon">More on the way: Acid House, Old-School Rave, Breakbeat Hardcore, Happy Hardcore and Hardcore Techno.</div>
         </div>
 
         <div className="parts">

@@ -273,6 +273,13 @@ input.search, .proj-name {
 * { scrollbar-width: thin; scrollbar-color: var(--surface3) transparent; }
 
 /* ───────── browser ───────── */
+.family-filter { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.7rem; }
+.family-filter button {
+  background: var(--surface2); border: 1px solid var(--line2); border-radius: 999px; padding: 0.25rem 0.65rem;
+  font-size: 0.78rem; font-weight: 600; color: var(--muted); display: inline-flex; gap: 0.35rem; align-items: center;
+}
+.family-filter button.on { color: var(--text); border-color: var(--violet); background: color-mix(in srgb, var(--violet) 18%, var(--surface2)); }
+.family-filter .count { font-family: var(--font-mono); font-size: 0.68rem; color: var(--dim); }
 .pack-list { display: flex; flex-direction: column; gap: 0.7rem; }
 .pack-card {
   border-radius: var(--radius); padding: 0.8rem; border: 1px solid var(--line2);
@@ -480,6 +487,9 @@ input.search, .proj-name {
 .pad.kind-breakdown { --pad: var(--violet); }
 .pad.kind-outro { --pad: #b37bff; }
 .pad.kind-fill { --pad: var(--amber); }
+.pad.kind-bridge { --pad: #5fd4ff; }
+.pad.kind-build { --pad: #c6ff5f; }
+.pad.kind-drop { --pad: #ff5a5a; }
 .scene-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr)); gap: 0.4rem; overflow: auto; align-content: start; }
 .scene { display: flex; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); }
 .scene-launch { flex: 1; background: color-mix(in srgb, var(--accent) 14%, var(--surface)); border: 0; padding: 0.5rem; text-align: left; font-size: 0.8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

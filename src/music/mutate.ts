@@ -100,6 +100,46 @@ function mutateNotes(p: Pattern, amount: number, seed: number): NoteEvent[] {
   return out.filter((n) => n.t < len).sort((a, b) => a.t - b.t);
 }
 
+/**
+ * Jungle-style break edit: cut the break into eighth-note slices and
+ * re-sequence them (on-beat slices only swap with on-beat slices), stutter
+ * the odd slice, and sometimes splice a 32nd-note snare roll into the last
+ * beat. Each bar's downbeat slice always stays, so the groove keeps its anchor.
+ */
+export function chopBreak(p: Pattern, amount: number, seed: number): DrumHit[] {
+  const rng = makeRng(seed);
+  const len = patternLength(p);
+  const SLICE = 2;
+  const n = Math.floor(len / SLICE);
+  const slices: DrumHit[][] = Array.from({ length: n }, () => []);
+  for (const h of p.hits ?? []) {
+    const i = Math.min(n - 1, Math.floor(h.t / SLICE));
+    slices[i].push({ ...h, t: h.t - i * SLICE });
+  }
+  const out: DrumHit[] = [];
+  let prevSrc = 0;
+  for (let i = 0; i < n; i++) {
+    let src = i;
+    if (i % 8 !== 0) {
+      if (rng.chance(0.12 * amount) && i > 0) src = prevSrc; // stutter
+      else if (rng.chance(0.45 * amount)) {
+        const candidates = Array.from({ length: n }, (_, j) => j).filter((j) => j % 2 === i % 2 && j % 8 !== 0);
+        src = rng.pick(candidates);
+      }
+    }
+    prevSrc = src;
+    for (const h of slices[src]) out.push({ ...h, t: i * SLICE + h.t });
+  }
+  if (rng.chance(0.5 * amount)) {
+    const start = len - 2;
+    for (let k = 0; k < 4; k++) {
+      const t = start + k * 0.5;
+      if (!out.some((h) => h.voice === 'snare' && Math.abs(h.t - t) < 0.01)) out.push({ t, v: 0.45 + k * 0.15, voice: 'snare' });
+    }
+  }
+  return out.filter((h) => h.t < len).sort((a, b) => a.t - b.t);
+}
+
 export function mutatePattern(p: Pattern, seed: number, amount = 1, newId?: string): Pattern {
   const generation = (p.name.match(/ v(\d+)$/)?.[1] ?? '1');
   const baseName = p.name.replace(/ v\d+$/, '');
@@ -107,7 +147,7 @@ export function mutatePattern(p: Pattern, seed: number, amount = 1, newId?: stri
     ...p,
     id: newId ?? `${p.sourceId ?? p.id}~${seed.toString(36)}`,
     name: `${baseName} v${Number(generation) + 1}`,
-    hits: p.kind === 'drum' ? mutateDrums(p, amount, seed) : undefined,
+    hits: p.kind === 'drum' ? (p.tags.includes('break') ? chopBreak(p, amount, seed) : mutateDrums(p, amount, seed)) : undefined,
     notes: p.kind === 'pitched' ? mutateNotes(p, amount, seed) : undefined,
     sourceId: p.sourceId ?? p.id,
     seed,

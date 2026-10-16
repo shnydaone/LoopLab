@@ -3,6 +3,7 @@ import { getPack, PACKS } from '@/content/library';
 import { engine } from '@/engine/engine';
 import { useLive } from '@/engine/live';
 import type { TrackState } from '@/project/types';
+import { ROLE_META } from '@/project/factory';
 import { useStore } from '@/state/store';
 import { Fader, IconBtn, Knob } from './controls';
 import { useMeter } from './hooks';
@@ -14,7 +15,7 @@ function Strip({ t }: { t: TrackState }) {
   const selected = useStore((s) => s.selectedTrackId === t.id);
   return (
     <div ref={ref} className={`strip ${selected ? 'selected' : ''}`} style={{ ['--role' as string]: t.color }}>
-      <button className="strip-name" onClick={() => selectTrack(t.id)}>{t.name}</button>
+      <button className="strip-name" onClick={() => selectTrack(t.id)} title={ROLE_META[t.role].name}>{ROLE_META[t.role].name}</button>
       <Knob label="Pan" size="sm" value={t.pan} min={-1} max={1} defaultValue={0} color={t.color}
         format={(v) => (Math.abs(v) < 0.02 ? 'C' : v < 0 ? `L${Math.round(-v * 100)}` : `R${Math.round(v * 100)}`)}
         onChange={(v) => setTrack(t.id, { pan: v }, true)} />
@@ -53,6 +54,9 @@ function Sections() {
   const playing = useLive((s) => s.playing);
   const pending = useLive((s) => s.harmonyPending);
   const fillQueued = useLive((s) => s.fillQueued);
+  const building = useLive((s) => s.building);
+  const buildQueued = useLive((s) => s.buildQueued);
+  const dropQueued = useLive((s) => s.dropQueued);
   const pack = getPack(project.basePackId) ?? PACKS[0];
   return (
     <div className="bp-block sections">
@@ -74,9 +78,27 @@ function Sections() {
             </button>
           );
         })}
-        <button className={`pad kind-fill ${fillQueued ? 'queued' : ''}`} disabled={!playing} onClick={() => engine.queueFill()}>
+        <button className={`pad kind-fill ${fillQueued ? 'queued' : ''}`} disabled={!playing} onClick={() => engine.queueFill()} title="Drum fill on the next bar (F)">
           <span className="pad-name">Fill</span>
           <span className="pad-sub">1 bar</span>
+        </button>
+        <button
+          className={`pad kind-build ${buildQueued ? 'queued' : ''} ${building ? 'on' : ''}`}
+          disabled={!playing || building}
+          onClick={() => engine.queueBuild(2)}
+          title="Build-up (B): two bars of rising filter sweep, riser and snare roll, then it drops"
+        >
+          <span className="pad-name">Build ↗</span>
+          <span className="pad-sub">{building ? 'building…' : '2 bars'}</span>
+        </button>
+        <button
+          className={`pad kind-drop ${dropQueued ? 'queued' : ''}`}
+          disabled={!playing}
+          onClick={() => engine.queueDrop()}
+          title="Drop (D): impact + crash on the next bar; ends a build early"
+        >
+          <span className="pad-name">Drop ⚡</span>
+          <span className="pad-sub">next bar</span>
         </button>
       </div>
     </div>
