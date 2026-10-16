@@ -69,12 +69,13 @@ class TrackRuntime {
     this.trim(new Set([id, this.instId ?? '']));
   }
 
-  useInstrument(id: string) {
+  /** `time` must be the transport callback time when called from the scheduler. */
+  useInstrument(id: string, time?: number) {
     if (this.instId === id && this.inst) return;
     this.preload(id);
     const inst = this.insts.get(id);
     if (!inst) return;
-    if (this.inst && this.inst !== inst) this.inst.releaseAll(Tone.now());
+    if (this.inst && this.inst !== inst) this.inst.releaseAll(time ?? Tone.now());
     this.inst = inst;
     this.instId = id;
     this.trim(new Set([id]));
@@ -275,7 +276,7 @@ export class AudioEngine {
     this.publish();
   }
 
-  private applyPending(rt: TrackRuntime, g: number) {
+  private applyPending(rt: TrackRuntime, g: number, time?: number) {
     if (!rt.pending) return;
     const id = rt.pending.patternId;
     rt.pending = null;
@@ -284,7 +285,7 @@ export class AudioEngine {
       rt.active = null;
       return;
     }
-    rt.useInstrument(rt.state.instrument ?? p.instrument);
+    rt.useInstrument(rt.state.instrument ?? p.instrument, time);
     rt.active = {
       pattern: p,
       cp: this.compile(p),
@@ -382,7 +383,7 @@ export class AudioEngine {
       }
       for (const rt of this.tracks.values()) {
         if (rt.pending) {
-          this.applyPending(rt, g);
+          this.applyPending(rt, g, time);
           changed = true;
         }
       }
