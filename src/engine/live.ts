@@ -33,6 +33,16 @@ export interface LiveState {
   soundMode: SoundMode;
   samplesPending: number;
   samplesLoaded: number;
+  /** Sections played this session, in order (the arrangement preview). */
+  history: SectionLog[];
+}
+
+export interface SectionLog {
+  packId: string;
+  sectionId: string | null;
+  name: string;
+  kind: string;
+  bar: number;
 }
 
 export type SoundMode = 'sampled' | 'synth';
@@ -60,6 +70,7 @@ export const liveStore = createStore<LiveState>(() => ({
   soundMode: initialSoundMode(),
   samplesPending: 0,
   samplesLoaded: 0,
+  history: [],
 }));
 
 export function useLive<T>(selector: (s: LiveState) => T): T {

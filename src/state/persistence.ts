@@ -38,6 +38,13 @@ export async function saveNow() {
   }
 }
 
+/** User-initiated save (Save button / Ctrl+S): counts as a real save action for the tour. */
+export async function saveManually() {
+  await saveNow();
+  useStore.getState().bump('save');
+  useStore.getState().toast(`Saved “${useStore.getState().project.name}”`, 'good');
+}
+
 export async function bootstrap() {
   if (booted) return;
   booted = true;
@@ -62,12 +69,12 @@ export async function bootstrap() {
   });
 }
 
-export async function newProject(packId?: string) {
+export async function newProject(packId?: string, name?: string, quiet = false) {
   await saveNow();
-  const p = createProject(packId);
+  const p = createProject(packId, name);
   useStore.getState().replaceProject(p);
   await saveNow();
-  useStore.getState().toast('New project created', 'good');
+  if (!quiet) useStore.getState().toast('New project created', 'good');
 }
 
 export async function openProject(id: string) {

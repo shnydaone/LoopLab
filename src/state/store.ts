@@ -38,6 +38,12 @@ export interface StoreState {
   saveStatus: SaveStatus;
   lastSeed: number | null;
   toasts: Toast[];
+  /** Count of user actions by name (used by the guided tour to detect real actions). */
+  events: Record<string, number>;
+  /** Strength of new variations (0.3 subtle … 1.6 bold). */
+  variationAmount: number;
+  bump: (name: string) => void;
+  setVariationAmount: (v: number) => void;
 
   update: (fn: (p: Project) => Project, opts?: UpdateOpts) => void;
   replaceProject: (p: Project) => void;
@@ -102,6 +108,10 @@ export const useStore = create<StoreState>((set, get) => ({
   saveStatus: 'saved',
   lastSeed: null,
   toasts: [],
+  events: {},
+  variationAmount: 1,
+  bump: (name) => set({ events: { ...get().events, [name]: (get().events[name] ?? 0) + 1 } }),
+  setVariationAmount: (variationAmount) => set({ variationAmount }),
 
   update: (fn, opts = {}) => {
     const { project, past, lastCoalesce } = get();
@@ -129,6 +139,7 @@ export const useStore = create<StoreState>((set, get) => ({
     const prev = past[past.length - 1];
     if (!prev) return;
     set({ project: prev, past: past.slice(0, -1), future: [project, ...future], saveStatus: 'unsaved', lastCoalesce: null });
+    get().bump('undo');
   },
 
   redo: () => {
@@ -159,6 +170,7 @@ export const useStore = create<StoreState>((set, get) => ({
       harmony: { ...pack.harmony, progression: section.progression },
       harmonyStamp: p.harmonyStamp + 1,
     }));
+    get().bump('loadGroove');
   },
 
   launchSection: (packId, sectionId) => {
@@ -177,6 +189,7 @@ export const useStore = create<StoreState>((set, get) => ({
         harmonyStamp: p.harmonyStamp + 1,
       };
     });
+    get().bump('section');
   },
 
   setTrackPattern: (trackId, patternId) =>
@@ -223,12 +236,13 @@ export const useStore = create<StoreState>((set, get) => ({
     const base = lookupPattern(project, track?.patternId);
     if (!track || !base) return;
     const seed = newSeed();
-    const v = mutatePattern(base, seed, 1);
+    const v = mutatePattern(base, seed, get().variationAmount);
     get().update((p) => ({
       ...mapTracks(p, (t) => (t.id === trackId ? { ...t, patternId: v.id } : t)),
       userPatterns: [...p.userPatterns.filter((u) => u.id !== v.id), v],
     }));
     set({ lastSeed: seed });
+    get().bump('variation');
     get().toast(`New variation: ${v.name}`, 'good');
   },
 
@@ -238,6 +252,7 @@ export const useStore = create<StoreState>((set, get) => ({
     const cur = lookupPattern(project, track?.patternId);
     if (!cur?.sourceId) return;
     get().setTrackPattern(trackId, cur.sourceId);
+    get().bump('revert');
   },
 
   surpriseMe: (seed = newSeed()) => {
@@ -257,8 +272,9 @@ export const useStore = create<StoreState>((set, get) => ({
       harmonyStamp: p.harmonyStamp + 1,
     }));
     set({ lastSeed: seed });
+    get().bump('surprise');
     const pack = getPack(res.basePackId);
-    get().toast(`Surprise! ${pack?.name ?? ''} · seed ${seed.toString(36)}`, 'good');
+    get().toast(`Surprise! ${pack?.name ?? ''} · Undo (Ctrl+Z) to go back`, 'good');
   },
 
   remixParts: () => {
@@ -273,7 +289,8 @@ export const useStore = create<StoreState>((set, get) => ({
     );
     get().update((p) => applyPicks(p, picks));
     set({ lastSeed: seed });
-    get().toast('Remixed unlocked parts', 'good');
+    get().bump('remix');
+    get().toast('Remixed unlocked parts · Undo to go back', 'good');
   },
 
   evolveEnergy: (dir) => {
@@ -287,6 +304,7 @@ export const useStore = create<StoreState>((set, get) => ({
       project.userPatterns,
     );
     get().update((p) => applyPicks(p, picks));
+    get().bump('energy');
     get().toast(dir > 0 ? 'Energy up ↑' : 'Energy down ↓');
   },
 
@@ -304,6 +322,7 @@ export const useStore = create<StoreState>((set, get) => ({
       ),
     };
     get().update((p) => ({ ...p, scenes: [...p.scenes, scene] }));
+    get().bump('saveScene');
     get().toast(`Saved ${scene.name}`, 'good');
   },
 
@@ -319,6 +338,7 @@ export const useStore = create<StoreState>((set, get) => ({
       harmony: scene.harmony,
       harmonyStamp: p.harmonyStamp + 1,
     }));
+    get().bump('scene');
   },
 
   deleteScene: (id) => get().update((p) => ({ ...p, scenes: p.scenes.filter((s) => s.id !== id) })),

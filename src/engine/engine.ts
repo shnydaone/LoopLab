@@ -404,6 +404,7 @@ export class AudioEngine {
     transport.position = 0;
     transport.start('+0.06');
     liveStore.setState({ playing: true, step: 0 });
+    this.logSection(0, true);
     this.publish();
   }
 
@@ -432,6 +433,12 @@ export class AudioEngine {
     this.step = 0;
     liveStore.setState({ playing: false, step: 0, fillQueued: false });
     this.publish();
+  }
+
+  /** Back to bar 1: restart playback from the top of the phrase. */
+  async restart() {
+    if (this.playing) this.stop();
+    await this.play();
   }
 
   async toggle() {
@@ -468,6 +475,7 @@ export class AudioEngine {
     const stepSec = 60 / bpm / 4;
     const q = QUANTIZE_STEPS[this.quantize()];
     let changed = false;
+    let sectionChanged = false;
 
     if (g % q === 0) {
       if (this.pendingHarmony) {
@@ -476,6 +484,7 @@ export class AudioEngine {
         this.pendingHarmony = null;
         this.progStart = g;
         changed = true;
+        sectionChanged = true;
       }
       for (const rt of this.tracks.values()) {
         if (rt.pending) {
@@ -568,8 +577,20 @@ export class AudioEngine {
 
     Tone.getDraw().schedule(() => {
       liveStore.setState({ step: g, progStart: this.progStart });
+      if (sectionChanged) this.logSection(Math.floor(g / STEPS_PER_BAR));
       if (changed) this.publish();
     }, time);
+  }
+
+  /** Append the current section to the session's arrangement preview. */
+  private logSection(bar: number, reset = false) {
+    const p = this.project;
+    if (!p) return;
+    const pack = getPack(p.basePackId);
+    const sec = pack?.sections.find((s) => s.id === p.sectionId);
+    const entry = { packId: p.basePackId, sectionId: p.sectionId, name: sec?.name ?? 'Custom', kind: sec?.kind ?? 'verse', bar };
+    const prev = reset ? [] : liveStore.getState().history;
+    liveStore.setState({ history: [...prev, entry].slice(-40) });
   }
 
   private drumsTrack() {
