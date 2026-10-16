@@ -93,6 +93,19 @@ scripts/samples/pitch.mjs      pitch detection used to verify bass note mapping
 - `SampledBass` (`engine/instruments/sampledBass.ts`): monophonic like a real player (new note
   mutes the previous with a 6 ms fade), short release at note end, staccato samples for notes
   < 0.16 s (Growlybass), per-zone level normalisation, EQ + compression chain per preset.
+- **Note-name octaves differ per library** (all verified by measuring pitch): Karoryfer basses
+  name an octave high (−12), Emilyguitar is scientific (0), VSCO 2 CE and VCSL name an octave
+  low (+12). These offsets are hard-coded in `build.mjs`; re-measure before adding a library.
+- `SampledGuitar` (`engine/instruments/sampledGuitar.ts`): chords strummed from single-note
+  samples (down = low→high, up = high→low, ~5 ms/string), ring clamped to 60–200 ms (players
+  can't damp faster), real string-mute release sample at chord end = the skank "chk",
+  muted-strum noise for chops/ghosts. Voice cap 36.
+- `SampledHorns` (`engine/instruments/sampledHorns.ts`): trumpet / tenor sax / trombone players
+  with ranges, pans and small lags. Single notes doubled per preset (`melody` shifts); chords
+  voiced top-to-bottom across `chordOrder`. Staccato samples below `staccatoBelow` seconds.
+- The engine wraps every instrument trigger in try/catch (`reportError`, logged once per
+  instrument) so one failing instrument can't abort the tick for the others. Always call
+  `src.start()` before `src.stop()` on buffer sources.
 - **Modelled organs** (`engine/instruments/organ.ts`, Studio mode only): no CC0 tonewheel
   recordings exist, and a tonewheel organ is itself additive, so it is modelled: nine drawbars
   in one PeriodicWave on the 16' sub-fundamental, key click, single-trigger percussion,
@@ -142,9 +155,11 @@ scripts/samples/pitch.mjs      pitch detection used to verify bass note mapping
   tempo feel, sections, fills, variations, Surprise/Remix/Evolve, locks, scenes, mixer + FX,
   autosave/projects/import/export, undo/redo, resizable panels, phone layout.
   Not yet: part preview/audition, capture, workspace layout presets.
-- **Sound quality track (in progress)** — done: sampled drums (2 kits), hand percussion,
-  timbales, both basses, player feel, A/B switch. Next (after Eric's listening review):
-  guitar skanks, organ bubble, brass, then mix cohesion (bus EQ/compression, shared room).
+- **Sound quality track** — done: sampled drums (2 kits), hand percussion, timbales, both
+  basses, sampled guitar (skank/muted/ska), sampled horn section, modelled tonewheel + combo
+  organs, player feel, mix glue, Studio/Classic A/B. Still synthesised: Bright Keys (FM piano),
+  Tine EP, dub siren, claps. Next: Eric's listening review, then piano/EP samples
+  (e.g. Salamander/VSCO upright, jRhodes — check licences) and per-instrument polish.
 - **Phase 2: Groove library & playground** — rock, funk, punk, hip-hop, pop, electronic,
   synthwave, jazz packs; One Drop / Rockers / Steppers / Dub / Dancehall sub-packs; trad ska,
   ska-punk, rocksteady; mood/energy filters for Surprise Me; key/chord compatibility scoring;

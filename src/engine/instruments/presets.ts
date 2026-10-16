@@ -2,6 +2,8 @@ import * as Tone from 'tone';
 import type { SoundMode } from '../live';
 import { DrumKit, KITS } from './drumKit';
 import { ComboOrgan, TonewheelOrgan } from './organ';
+import { SampledGuitar, type GuitarSampleDef } from './sampledGuitar';
+import { SampledHorns, type HornSectionDef } from './sampledHorns';
 import { createPitched } from './pitched';
 import { SampledBass, type BassSampleDef } from './sampledBass';
 import { SampledKit, type KitSampleDef } from './sampledDrums';
@@ -81,8 +83,58 @@ const MODELLED: Record<string, (id: string) => Instrument> = {
   'organ-combo': (id) => new ComboOrgan(id, 2.8),
 };
 
+const guitarChain = (presence: number, presenceHz: number) => () => [
+  new Tone.Filter({ type: 'highpass', frequency: 140, Q: 0.7 }),
+  new Tone.Filter({ type: 'peaking', frequency: presenceHz, Q: 0.9, gain: presence }),
+  new Tone.Filter({ type: 'lowpass', frequency: 9000, Q: 0.5 }),
+  new Tone.Compressor({ threshold: -22, ratio: 3, attack: 0.004, release: 0.1, knee: 6 }),
+];
+
+const SAMPLED_GUITAR: Record<string, GuitarSampleDef> = {
+  // Roots skank: a quick down-stroke, damped right away; the mute noise is the "chk".
+  'gtr-skank': { strum: 0.006, up: false, muted: false, maxRing: 0.2, levelDb: -27, releaseGain: 0.32, scratch: 0.045, chain: guitarChain(3, 2600) },
+  // Ska: brighter up-strokes on every offbeat.
+  'gtr-ska': { strum: 0.005, up: true, muted: false, maxRing: 0.17, levelDb: -26, releaseGain: 0.3, scratch: 0.055, chain: guitarChain(4, 3200) },
+  // Muted chops: fretting hand resting on the strings.
+  'gtr-muted': { strum: 0.004, up: false, muted: true, maxRing: 0.05, levelDb: -26, releaseGain: 0.4, scratch: 0.26, chain: guitarChain(2, 2400) },
+};
+
+const SAMPLED_HORNS: Record<string, HornSectionDef> = {
+  // Roots: mellow tenor sax with trombone an octave below.
+  'horns-roots': {
+    melody: [
+      { player: 'tenor-sax', shift: 0 },
+      { player: 'trombone', shift: -12 },
+    ],
+    chordOrder: ['tenor-sax', 'trombone'],
+    staccatoBelow: 0.22,
+    release: 0.12,
+    chain: () => [
+      new Tone.Filter({ type: 'highpass', frequency: 110, Q: 0.7 }),
+      new Tone.Filter({ type: 'lowpass', frequency: 7000, Q: 0.5 }),
+      new Tone.Compressor({ threshold: -20, ratio: 2.5, attack: 0.01, release: 0.15, knee: 6 }),
+    ],
+  },
+  // Ska: the classic trumpet + tenor unison with trombone an octave below.
+  'horns-ska': {
+    melody: [
+      { player: 'trumpet', shift: 0 },
+      { player: 'tenor-sax', shift: 0 },
+      { player: 'trombone', shift: -12 },
+    ],
+    chordOrder: ['trumpet', 'tenor-sax', 'trombone'],
+    staccatoBelow: 0.2,
+    release: 0.08,
+    chain: () => [
+      new Tone.Filter({ type: 'highpass', frequency: 130, Q: 0.7 }),
+      new Tone.Filter({ type: 'peaking', frequency: 3000, Q: 1, gain: 1.5 }),
+      new Tone.Compressor({ threshold: -20, ratio: 2.5, attack: 0.008, release: 0.12, knee: 6 }),
+    ],
+  },
+};
+
 export function hasSamples(id: string): boolean {
-  return id in SAMPLED_KITS || id in SAMPLED_BASS || id in MODELLED;
+  return id in SAMPLED_KITS || id in SAMPLED_BASS || id in MODELLED || id in SAMPLED_GUITAR || id in SAMPLED_HORNS;
 }
 
 function createSynth(id: string): Instrument | null {
@@ -102,6 +154,10 @@ export function createInstrument(id: string, mode: SoundMode = 'synth'): Instrum
     if (bass) return new SampledBass(id, bass, createSynth(id));
     const modelled = MODELLED[id];
     if (modelled) return modelled(id);
+    const guitar = SAMPLED_GUITAR[id];
+    if (guitar) return new SampledGuitar(id, guitar, createSynth(id));
+    const horns = SAMPLED_HORNS[id];
+    if (horns) return new SampledHorns(id, horns, createSynth(id));
   }
   return createSynth(id);
 }

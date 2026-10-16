@@ -83,6 +83,10 @@ class TrackRuntime {
     this.roomSend.connect(room);
   }
 
+  get instKeyForLog() {
+    return this.instKey ?? this.state.id;
+  }
+
   private key(id: string, mode = this.mode) {
     return `${id}|${mode}`;
   }
@@ -500,20 +504,25 @@ export class AudioEngine {
         const offset = timingOffset(pattern.packId, pattern.role, ev.hit?.voice);
         const when = Math.max(time - 0.02, time + rel * k * stepSec + offset);
         const vel = velocityFor(pattern.packId, ev.hit?.v ?? ev.note?.v ?? 0.8);
-        if (ev.hit) {
-          rt.inst.hit?.(ev.hit.voice, vel, when);
-        } else if (ev.note && rt.inst.notes) {
-          const gPos = g + rel * k;
-          const chord = chordAt(th.progression, gPos - this.progStart);
-          const midis = resolveNote(ev.note, {
-            harmony: th,
-            chord,
-            role: pattern.role,
-            ref: pattern.harmony ?? 'chord',
-            voicing: pattern.voicing ?? 'close',
-          });
-          const lenSteps = rt.inst.mono ? (ev.monoDur ?? ev.note.d) : ev.note.d;
-          rt.inst.notes(midis, lenSteps * k * stepSec, vel, when);
+        // Isolate each instrument: one failing voice must never silence the rest of the band.
+        try {
+          if (ev.hit) {
+            rt.inst.hit?.(ev.hit.voice, vel, when);
+          } else if (ev.note && rt.inst.notes) {
+            const gPos = g + rel * k;
+            const chord = chordAt(th.progression, gPos - this.progStart);
+            const midis = resolveNote(ev.note, {
+              harmony: th,
+              chord,
+              role: pattern.role,
+              ref: pattern.harmony ?? 'chord',
+              voicing: pattern.voicing ?? 'close',
+            });
+            const lenSteps = rt.inst.mono ? (ev.monoDur ?? ev.note.d) : ev.note.d;
+            rt.inst.notes(midis, lenSteps * k * stepSec, vel, when);
+          }
+        } catch (err) {
+          this.reportError(rt.instKeyForLog, err);
         }
       }
     }
@@ -522,6 +531,15 @@ export class AudioEngine {
       liveStore.setState({ step: g, progStart: this.progStart });
       if (changed) this.publish();
     }, time);
+  }
+
+  private errorCounts = new Map<string, number>();
+
+  /** Log instrument failures once (not every 16th note) so the console stays readable. */
+  private reportError(key: string, err: unknown) {
+    const n = (this.errorCounts.get(key) ?? 0) + 1;
+    this.errorCounts.set(key, n);
+    if (n === 1) console.error(`[engine] instrument ${key} failed; other tracks keep playing`, err);
   }
 
   private startFill(g: number, bpm: number) {
@@ -579,5 +597,6 @@ export class AudioEngine {
 export const engine = new AudioEngine();
 
 if (import.meta.env.DEV) {
-  (window as unknown as { __looplab: AudioEngine }).__looplab = engine;
+  (window as unknown as { __looplab: AudioEngine; __Tone: typeof Tone }).__looplab = engine;
+  (window as unknown as { __Tone: typeof Tone }).__Tone = Tone;
 }

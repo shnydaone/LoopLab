@@ -24,10 +24,14 @@ export interface BassZone {
 }
 
 export interface SampleInstrument {
-  type: 'drums' | 'bass';
+  type: 'drums' | 'bass' | 'pitched';
   voices?: Record<string, DrumVoiceSamples>;
   zones?: BassZone[];
   staccato?: BassZone[];
+  /** String-mute / release noises per pitch zone (guitar). */
+  release?: BassZone[];
+  /** Unpitched noises (e.g. muted strums). */
+  noises?: Record<string, DrumVoiceSamples>;
 }
 
 export interface SampleManifest {

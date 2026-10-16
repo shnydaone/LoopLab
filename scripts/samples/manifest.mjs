@@ -61,6 +61,33 @@ export const SOURCES = [
     include: [/^notes\/[a-g]b?\d_(p|f|fff)_rr[12]\.wav$/, /\.sfz$/],
   },
   {
+    id: 'emilyguitar',
+    repo: 'sfzinstruments/karoryfer.emilyguitar',
+    branch: 'master',
+    license: 'CC0-1.0',
+    credit: 'Emilyguitar by Karoryfer Samples (played by D. Smolken)',
+    include: [/^notes\/[a-g]b?\d_(p|mf|f)_rr[12]\.wav$/, /^release\/[a-g]b?\d_release_rr\d\.wav$/, /^noises\/muted\d?_rr\d\.wav$/, /\.sfz$/],
+  },
+  {
+    id: 'vsco-brass',
+    repo: 'sgossner/VSCO-2-CE',
+    branch: 'master',
+    license: 'CC0-1.0',
+    credit: 'Versilian Studios Chamber Orchestra 2 Community Edition (trumpet, tenor trombone)',
+    include: [/^Brass\/Trumpet\/(sus|stac)\/[^/]+\.wav$/, /^Brass\/Tenor Trombone\/(sus|stac)\/[^/]+\.wav$/],
+  },
+  {
+    id: 'vcsl-sax',
+    repo: 'sgossner/VCSL',
+    branch: 'master',
+    license: 'CC0-1.0',
+    credit: 'Versilian Community Sample Library (tenor saxophone, played by Brett)',
+    include: [
+      /^Aerophones\/Reed Aerophones\/Tenor Saxophone\/Staccato\/[^/]+\.wav$/,
+      /^Aerophones\/Reed Aerophones\/Tenor Saxophone\/Non-Vibrato\/[^/]+_vl[23]_rr1\.wav$/,
+    ],
+  },
+  {
     id: 'growlybass',
     repo: 'sfzinstruments/karoryfer.growlybass',
     branch: 'master',

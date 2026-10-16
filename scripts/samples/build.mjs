@@ -267,10 +267,50 @@ async function buildBass(id, source, folder, dynOrder, extra = {}) {
   return { id, jobs, zones };
 }
 
+/** Generic note-name parser: C, C#, Db, … with octave (scientific, C4 = 60). */
+function noteNameToMidi(name) {
+  const m = /^([a-gA-G])([#b]?)(-?\d)$/.exec(name);
+  if (!m) return null;
+  const base = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 }[m[1].toLowerCase()];
+  const acc = m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0;
+  return 12 * (+m[3] + 1) + base + acc;
+}
+
+/**
+ * Pitched sample set from one folder.
+ * re groups: 1 = note name, 2 = velocity token (optional), 3 = round robin.
+ * offset = semitones to add to the scientific name (measured per library).
+ */
+async function buildPitchedSet({ id, sub, dir, re, velOrder, offset, dur, fade, mono = true, hp = 40 }) {
+  const files = await walk(dir);
+  const zones = new Map();
+  const jobs = [];
+  for (const f of files) {
+    const m = re.exec(f);
+    if (!m) continue;
+    const midi0 = noteNameToMidi(m[1]);
+    if (midi0 === null) continue;
+    const midi = midi0 + offset;
+    const velTok = m[2] ?? '1';
+    const vl = velOrder ? velOrder.indexOf(velTok) + 1 : +velTok;
+    if (vl <= 0) continue;
+    if (!zones.has(midi)) zones.set(midi, []);
+    const safe = m[1].replace('#', 's');
+    const out = join(OUT, id, sub, `${safe}_v${vl}_rr${m[3] ?? 1}.flac`);
+    const entry = { vl, rr: +(m[3] ?? 1), out, src: f };
+    zones.get(midi).push(entry);
+    jobs.push({ entry, inputs: [{ file: f, gain: 1 }], opts: { dur, fade, mono, hp } });
+  }
+  return { jobs, zones };
+}
+
 async function main() {
   if (!existsSync(CACHE)) throw new Error('Run scripts/samples/fetch.mjs first');
-  await rm(OUT, { recursive: true, force: true });
+  // Clear generated audio only; hand-written files such as LICENSES.md stay.
   await mkdir(OUT, { recursive: true });
+  for (const e of await readdir(OUT, { withFileTypes: true })) {
+    if (e.isDirectory() || e.name === 'manifest.json') await rm(join(OUT, e.name), { recursive: true, force: true });
+  }
 
   const vd = await buildVirtuosityKit();
   const br = await buildRustyKit();
@@ -279,7 +319,33 @@ async function main() {
   const round = await buildBass('bass-round', 'growlybass', 'sustain', ['p', 'f', 'ff']);
   const stac = await buildBass('bass-round', 'growlybass', 'staccato', ['staccato'], { dur: 1.2, fade: 0.25 });
 
-  const all = [vd, br, perc, dub, round, stac].flatMap((b) => b.jobs);
+  // Guitar (Emilyguitar: scientific note names, measured e2 = MIDI 40)
+  const EG = join(CACHE, 'emilyguitar');
+  const gNotes = await buildPitchedSet({ id: 'guitar', sub: 'notes', dir: join(EG, 'notes'), re: /[\\/]([a-g]b?\d)_(p|mf|f)_rr(\d)\.wav$/, velOrder: ['p', 'mf', 'f'], offset: 0, dur: 1.6, fade: 0.4, hp: 70 });
+  const gRel = await buildPitchedSet({ id: 'guitar', sub: 'release', dir: join(EG, 'release'), re: /[\\/]([a-g]b?\d)_release()_rr(\d)\.wav$/, velOrder: [''], offset: 0, dur: 0.6, fade: 0.2, hp: 70 });
+  const gMuted = { jobs: [], entries: [] };
+  for (const f of await walk(join(EG, 'noises'))) {
+    const m = /[\\/]muted(\d?)_rr(\d)\.wav$/.exec(f);
+    if (!m) continue;
+    const out = join(OUT, 'guitar', 'muted', `muted${m[1] || 0}_rr${m[2]}.flac`);
+    const entry = { vl: 1, rr: (+(m[1] || 0)) * 10 + +m[2], out };
+    gMuted.entries.push(entry);
+    gMuted.jobs.push({ entry, inputs: [{ file: f, gain: 1 }], opts: { dur: 0.45, fade: 0.15, mono: true, hp: 80 } });
+  }
+
+  // Horn section. VSCO & VCSL name notes an octave low (measured: "A#3" trumpet = MIDI 70).
+  const TP = join(CACHE, 'vsco-brass', 'Brass', 'Trumpet');
+  const TB = join(CACHE, 'vsco-brass', 'Brass', 'Tenor Trombone');
+  const SX = join(CACHE, 'vcsl-sax', 'Aerophones', 'Reed Aerophones', 'Tenor Saxophone');
+  const tpSus = await buildPitchedSet({ id: 'trumpet', sub: 'sus', dir: join(TP, 'sus'), re: /_sus_([A-G]#?\d)_v(\d)_rr(\d)\.wav$/, offset: 12, dur: 2.4, fade: 0.5, hp: 150 });
+  const tpStac = await buildPitchedSet({ id: 'trumpet', sub: 'stac', dir: join(TP, 'stac'), re: /_stac_([A-G]#?\d)_v(\d)_rr(\d)\.wav$/, offset: 12, dur: 0.7, fade: 0.2, hp: 150 });
+  const tbSus = await buildPitchedSet({ id: 'trombone', sub: 'sus', dir: join(TB, 'sus'), re: /tenortbn_sus_([A-G]#?\d)_v(\d)_(\d)\.wav$/, offset: 12, dur: 2.4, fade: 0.5, hp: 60 });
+  const tbStac = await buildPitchedSet({ id: 'trombone', sub: 'stac', dir: join(TB, 'stac'), re: /tenortbn_stac_([A-G]#?\d)_v(\d)_rr(\d)\.wav$/, offset: 12, dur: 0.7, fade: 0.2, hp: 60 });
+  const sxSus = await buildPitchedSet({ id: 'tenor-sax', sub: 'sus', dir: join(SX, 'Non-Vibrato'), re: /NV_Main_([A-G]#?\d)_vl(\d)_rr(\d)\.wav$/, offset: 12, dur: 2.4, fade: 0.5, hp: 90 });
+  const sxStac = await buildPitchedSet({ id: 'tenor-sax', sub: 'stac', dir: join(SX, 'Staccato'), re: /Staccato_Main_([A-G]#?\d)_vl(\d)_rr(\d)\.wav$/, offset: 12, dur: 0.7, fade: 0.2, hp: 90 });
+
+  const pitchedSets = [gNotes, gRel, tpSus, tpStac, tbSus, tbStac, sxSus, sxStac];
+  const all = [vd, br, perc, dub, round, stac, gMuted, ...pitchedSets].flatMap((b) => b.jobs);
   console.log(`Converting ${all.length} files…`);
   await pool(all, 8, async (job) => {
     await mixTo(job.entry.out, job.inputs, job.opts);
@@ -289,7 +355,7 @@ async function main() {
   // Pitch-verify bass zones (tuning correction, clamped to ±40 cents)
   const tuneOf = (entries) => {
     try {
-      const p = detectPitch(decodeMono(entries[0].src));
+      const p = detectPitch(decodeMono(entries[0].src, 1.5), 22050, 30, 1400);
       return p ? p.midi : null;
     } catch {
       return null;
@@ -320,6 +386,15 @@ async function main() {
       perc: { type: 'drums', voices: drumVoices(perc.voices) },
       'bass-dub': { type: 'bass', zones: bassZones(dub.zones) },
       'bass-round': { type: 'bass', zones: bassZones(round.zones), staccato: bassZones(stac.zones) },
+      guitar: {
+        type: 'pitched',
+        zones: bassZones(gNotes.zones),
+        release: bassZones(gRel.zones).map((z) => ({ ...z, cents: 0 })),
+        noises: { muted: { layers: layersFrom(gMuted.entries) } },
+      },
+      trumpet: { type: 'pitched', zones: bassZones(tpSus.zones), staccato: bassZones(tpStac.zones) },
+      trombone: { type: 'pitched', zones: bassZones(tbSus.zones), staccato: bassZones(tbStac.zones) },
+      'tenor-sax': { type: 'pitched', zones: bassZones(sxSus.zones), staccato: bassZones(sxStac.zones) },
     },
   };
   await writeFile(join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 1));
