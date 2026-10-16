@@ -4,7 +4,7 @@
  * upstroke guitar and combo organ on every offbeat, punchy unison horns.
  */
 import type { GenrePack } from '@/music/types';
-import { ch, grid, makePatternFactory, n } from '../dsl';
+import { ap, ch, grid, makePatternFactory, n } from '../dsl';
 
 const PACK = 'two-tone-ska';
 const P = makePatternFactory({ packId: PACK, genre: 'Two-Tone Ska', bpm: 168 });
@@ -41,11 +41,28 @@ export const twoToneSka: GenrePack = {
       swing: 0.05,
       instrument: 'kit-twotone',
       energy: 4,
-      description: 'Four-on-the-floor kick, hard backbeat, hats leaning on the offbeat.',
+      description: 'Kick on 1, the "and" of 2 and 3, hard backbeat, hats leaning on the offbeat: drive with space.',
+      hits: grid({
+        kick: 'X.....x.X...x...',
+        snare: '....X.......X...',
+        hatC: '-.x.-.x.-.x.-.x.',
+      }),
+    }),
+    P({
+      id: 'tt-drums-punk',
+      name: 'Ska-Punk Stomp',
+      role: 'drums',
+      bars: 1,
+      swing: 0,
+      instrument: 'kit-twotone',
+      energy: 5,
+      tags: ['punk'],
+      description: 'Four-on-the-floor kick under a hard backbeat: the third-wave / ska-punk push.',
       hits: grid({
         kick: 'X...X...X...X...',
         snare: '....X.......X...',
-        hatC: '-.x.-.x.-.x.-.x.',
+        hatO: '..x...x...x...x.',
+        hatC: 'x...x...x...x...',
       }),
     }),
     P({
@@ -123,16 +140,16 @@ export const twoToneSka: GenrePack = {
       swing: 0,
       instrument: 'bass-round',
       energy: 3,
-      description: 'Quarter-note walk up the chord, then back down.',
+      description: 'Quarter-note walk that leads into every chord change: from a semitone below, then from a step above.',
       notes: [
         n(0, 0, 3.4, 0.9),
         n(4, 2, 3.4, 0.75),
         n(8, 4, 3.4, 0.85),
-        n(12, 5, 3.4, 0.75),
-        n(16, 7, 3.4, 0.9),
-        n(20, 5, 3.4, 0.75),
-        n(24, 4, 3.4, 0.85),
-        n(28, 2, 3.4, 0.75),
+        ap(12, 0, 3.4, 0.75, 0, -1), // chromatic approach into the next chord
+        n(16, 0, 3.4, 0.9, 1),
+        n(20, 4, 3.4, 0.75),
+        n(24, 2, 3.4, 0.8),
+        ap(28, 1, 3.4, 0.75), // diatonic step above the next root
       ],
     }),
     P({
@@ -152,7 +169,7 @@ export const twoToneSka: GenrePack = {
         n(8, 4, 1.6, 0.85),
         n(10, 4, 1.4, 0.6),
         n(12, 5, 1.6, 0.8),
-        n(14, 4, 1.4, 0.6),
+        ap(14, 0, 1.4, 0.65, 0, -1),
         n(16, 0, 1.6, 0.9, 1),
         n(18, 0, 1.4, 0.55, 1),
         n(20, 5, 1.6, 0.8),
@@ -160,7 +177,7 @@ export const twoToneSka: GenrePack = {
         n(24, 4, 1.6, 0.85),
         n(26, 2, 1.4, 0.6),
         n(28, 1, 1.6, 0.8),
-        n(30, -1, 1.4, 0.7),
+        ap(30, 0, 1.4, 0.75, 0, -1), // pushes into the next bar's root
       ],
     }),
     P({

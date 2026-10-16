@@ -35,6 +35,16 @@ export const n = (t: number, s: number, d: number, v = 0.8, o?: number, c?: numb
   ...(c ? { c } : {}),
 });
 
+/**
+ * Approach note into the NEXT bar's chord: scale step `s` (+ chromatic `c`)
+ * relative to the upcoming root. e.g. ap(12, 0, 3.5, 0.7, 0, -1) = a semitone
+ * below the next chord's root on beat 4: the classic walking-bass approach.
+ */
+export const ap = (t: number, s: number, d: number, v = 0.75, o?: number, c?: number): NoteEvent => ({
+  ...n(t, s, d, v, o, c),
+  nx: true,
+});
+
 /** Chord: time, scale steps, duration, velocity, octave. */
 export const ch = (t: number, s: number[], d: number, v = 0.8, o?: number): NoteEvent => ({
   t,

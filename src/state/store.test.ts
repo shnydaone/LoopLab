@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { PACKS, patternsForRole } from '@/content/library';
 import { surprise } from '@/music/generate';
 import { createProject } from '@/project/factory';
 import { useStore } from './store';
@@ -35,7 +36,7 @@ describe('live mix state', () => {
     s().setTrackPattern('trk-bass', 'tt-bass-walk-a');
     s().toggleMute('trk-guitar');
     s().launchScene(scene.id);
-    expect(track('bass').patternId).toBe('rr-bass-roots-a');
+    expect(track('bass').patternId).toBe('rr-bass-classic');
     expect(track('guitar').mute).toBe(false);
   });
 
@@ -53,21 +54,23 @@ describe('live mix state', () => {
   it('creates a variation as a new user pattern and can revert to the original', () => {
     s().mutateTrack('trk-bass');
     const id = track('bass').patternId!;
-    expect(id).not.toBe('rr-bass-roots-a');
-    expect(s().project.userPatterns.find((p) => p.id === id)?.sourceId).toBe('rr-bass-roots-a');
+    expect(id).not.toBe('rr-bass-classic');
+    expect(s().project.userPatterns.find((p) => p.id === id)?.sourceId).toBe('rr-bass-classic');
     s().revertTrack('trk-bass');
-    expect(track('bass').patternId).toBe('rr-bass-roots-a');
+    expect(track('bass').patternId).toBe('rr-bass-classic');
   });
 
-  it('cycles parts across genres for a role', () => {
+  it('cycles parts across every genre for a role and wraps around', () => {
     const first = track('drums').patternId;
+    const pool = patternsForRole('drums');
     const seen = new Set<string | null>([first]);
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < pool.length; i++) {
       s().cyclePattern('trk-drums', 1);
       seen.add(track('drums').patternId);
     }
-    expect([...seen].some((id) => id?.startsWith('tt-'))).toBe(true);
-    expect([...seen].some((id) => id?.startsWith('rr-'))).toBe(true);
+    const packs = new Set([...seen].map((id) => pool.find((p) => p.id === id)?.packId));
+    expect(packs.size).toBe(PACKS.length);
+    expect(track('drums').patternId).toBe(first); // full loop returns to the start
   });
 });
 

@@ -9,7 +9,7 @@ import * as Tone from 'tone';
 import { getBuiltinPattern, getPack } from '@/content/library';
 import { effectiveHarmony, feelFactor, resolveNote, type CompatMode } from '@/music/compat';
 import { compilePattern, eventsInWindow, type CompiledPattern } from '@/music/pattern';
-import { chordAt } from '@/music/theory';
+import { chordAt, nextBarChord } from '@/music/theory';
 import type { Harmony, Pattern, Role } from '@/music/types';
 import { STEPS_PER_BAR } from '@/music/types';
 import type { Project, Quantize, TrackState } from '@/project/types';
@@ -511,9 +511,11 @@ export class AudioEngine {
           } else if (ev.note && rt.inst.notes) {
             const gPos = g + rel * k;
             const chord = chordAt(th.progression, gPos - this.progStart);
+            const nextChord = ev.note.nx ? nextBarChord(th.progression, gPos - this.progStart) : undefined;
             const midis = resolveNote(ev.note, {
               harmony: th,
               chord,
+              nextChord,
               role: pattern.role,
               ref: pattern.harmony ?? 'chord',
               voicing: pattern.voicing ?? 'close',

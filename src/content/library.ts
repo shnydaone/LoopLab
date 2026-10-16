@@ -4,10 +4,15 @@
  * (browser, Surprise Me, compatibility) picks them up automatically.
  */
 import type { GenrePack, Pattern, Role } from '@/music/types';
+import { dub } from './packs/dub';
+import { kingstonSka } from './packs/kingstonSka';
+import { rocksteady } from './packs/rocksteady';
 import { rootsReggae } from './packs/rootsReggae';
+import { steppers } from './packs/steppers';
 import { twoToneSka } from './packs/twoToneSka';
 
-export const PACKS: GenrePack[] = [rootsReggae, twoToneSka];
+/** Ordered roughly by family and history: ska → rocksteady → reggae styles. */
+export const PACKS: GenrePack[] = [rootsReggae, steppers, dub, rocksteady, kingstonSka, twoToneSka];
 
 const packById = new Map(PACKS.map((p) => [p.id, p]));
 const builtinPatterns = new Map<string, Pattern>();

@@ -63,6 +63,11 @@ export interface NoteEvent {
   s: number | number[];
   o?: number;
   c?: number;
+  /**
+   * Resolve against the NEXT bar's chord instead of the current one. Used for
+   * approach notes and anticipations (a bassist leading into the change).
+   */
+  nx?: boolean;
 }
 
 export type HarmonyRef = 'chord' | 'key';

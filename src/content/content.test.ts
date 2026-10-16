@@ -59,10 +59,14 @@ describe('groove library integrity', () => {
     expect(ska.bpm).toBeGreaterThan(reggae.bpm * 1.8);
     const oneDrop = getBuiltinPattern('rr-drums-onedrop-a')!;
     const twoTone = getBuiltinPattern('tt-drums-a')!;
-    // One drop: nothing on beat 1, kick on 3. Two-tone: kick on every beat.
+    const punk = getBuiltinPattern('tt-drums-punk')!;
+    // One drop: nothing on beat 1, kick on 3. Two-tone: kick on 1 with a hard 2-and-4 backbeat.
     expect(oneDrop.hits!.some((h) => h.voice === 'kick' && h.t === 0)).toBe(false);
     expect(oneDrop.hits!.some((h) => h.voice === 'kick' && h.t === 8)).toBe(true);
-    expect([0, 4, 8, 12].every((t) => twoTone.hits!.some((h) => h.voice === 'kick' && h.t === t))).toBe(true);
+    expect(twoTone.hits!.some((h) => h.voice === 'kick' && h.t === 0)).toBe(true);
+    expect([4, 12].every((t) => twoTone.hits!.some((h) => h.voice === 'snare' && h.t === t))).toBe(true);
+    // Ska-punk is the four-on-the-floor variant.
+    expect([0, 4, 8, 12].every((t) => punk.hits!.some((h) => h.voice === 'kick' && h.t === t))).toBe(true);
     expect(reggae.harmony.mode).not.toBe(ska.harmony.mode);
   });
 

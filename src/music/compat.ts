@@ -78,6 +78,8 @@ export const REGISTER: Record<Role, { low: number; center: number }> = {
 export interface ResolveCtx {
   harmony: TrackHarmony;
   chord: Chord;
+  /** Chord of the next bar, for approach notes (`nx`). Falls back to `chord`. */
+  nextChord?: Chord;
   role: Role;
   ref: 'chord' | 'key';
   voicing: 'close' | 'open';
@@ -89,7 +91,8 @@ function isStrong(n: NoteEvent) {
 
 /** Resolve one note event to MIDI pitches. */
 export function resolveNote(n: NoteEvent, ctx: ResolveCtx): number[] {
-  const { harmony: h, chord, role, ref } = ctx;
+  const { harmony: h, role, ref } = ctx;
+  const chord = n.nx && ctx.nextChord ? ctx.nextChord : ctx.chord;
   const reg = REGISTER[role];
   const steps = Array.isArray(n.s) ? n.s : [n.s];
   const oct = (n.o ?? 0) * 12 + (n.c ?? 0);

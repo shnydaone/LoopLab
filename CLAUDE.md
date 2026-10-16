@@ -128,12 +128,29 @@ scripts/samples/pitch.mjs      pitch detection used to verify bass note mapping
 4. Register it in `content/library.ts` `PACKS`. `content.test.ts` validates it automatically.
 5. Write *authored* material (real grooves, idiomatic voicings), not random notes.
 
-### Musical conventions in the starter packs
+### Musical conventions in the packs
 
-- **Roots Reggae** — 76 BPM, A Dorian, swing 0.45 shared by all parts. One drop = kick + cross-stick
-  on beat 3 only. Bass leaves the downbeat empty. Skank on 2 & 4; organ bubble on "&"/"a".
-- **Two-Tone Ska** — 168 BPM, G major, straight. Four-on-floor or 1&3 kick, hard backbeat,
-  upstrokes and combo organ on every offbeat, walking bass, unison octave horns.
+Counting convention: reggae-family packs are written at the slow tempo (70–85 BPM) with the
+drop on beat 3, so the skank on steps 4/12 (beats 2 & 4) *is* the offbeat. Ska packs are written
+at full tempo, so their chops sit on every eighth-note "and" (2, 6, 10, 14). An external review
+(ChatGPT) flagged the reggae skank as misplaced; that was this counting mix-up, not a bug.
+
+- **Roots Reggae** — 76 BPM, A Dorian. Swing 0.45 on drums/organ/perc, 0.25 on bass/guitar
+  (players' looseness comes from feel.ts). One drop = kick + cross-stick on beat 3 only.
+  Verse bass is the sparse "Deep Roots Classic". "Double Skank" = rockers-style eighth offbeats.
+- **Militant Steppers** — 78 BPM, D minor. Four-on-floor kick, rimshot on 3, double skank,
+  double bubble, driving/roller bass.
+- **Dub** — 72 BPM, E minor. Space as a sound: "Empty Drop", single echo chops and stabs,
+  very long bass notes, siren throws.
+- **Rocksteady** — 82 BPM, D major. Soft kick 1 & 3, cross-stick 2 & 4, melodic lead bass with
+  anticipations, muted guitar picking that doubles the bass.
+- **Early Ska (Kingston Shuffle)** — 132 BPM, F major. Shuffle written as exact triplets
+  (`sh(b) = b*4 + 8/3`), soft four-on-floor kick, cross-stick backbeat, shuffling ride, walking
+  bass with skip notes, piano/guitar on the swung "and".
+- **Two-Tone Ska** — 168 BPM, G major, straight. Main beat kicks 1, &2, 3, 4 with a hard backbeat;
+  four-on-floor lives in "Ska-Punk Stomp". Walking basses use approach notes (`ap()`).
+- `ap(t, s, d, v, o, c)` in the DSL marks an approach note (`nx: true`): it resolves against the
+  NEXT bar's chord (e.g. `ap(12, 0, 3.4, 0.75, 0, -1)` = semitone below the coming root).
 
 ## Testing
 

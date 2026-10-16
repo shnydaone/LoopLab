@@ -67,6 +67,12 @@ export function chordAt(prog: Chord[], step: number): Chord {
   return prog[prog.length - 1];
 }
 
+/** Chord that starts the bar after `step` (for approach notes into the change). */
+export function nextBarChord(prog: Chord[], step: number): Chord {
+  const nextBar = (Math.floor(step / STEPS_PER_BAR + 1e-9) + 1) * STEPS_PER_BAR;
+  return chordAt(prog, nextBar);
+}
+
 export function chordIndexAt(prog: Chord[], step: number): number {
   const c = chordAt(prog, step);
   return prog.indexOf(c);

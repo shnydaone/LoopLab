@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { effectiveHarmony, feelFactor, resolveNote } from './compat';
 import { mutatePattern } from './mutate';
 import { compilePattern, eventsInWindow, swingTime } from './pattern';
-import { chordAt, chordName, degreeToSemis, progressionSteps } from './theory';
+import { chordAt, chordName, degreeToSemis, nextBarChord, progressionSteps } from './theory';
 import type { Harmony, Pattern } from './types';
 
 const aDorian: Harmony = {
@@ -118,6 +118,28 @@ describe('compatibility engine', () => {
     const creative = resolveNote(note, { harmony: effectiveHarmony('creative', aDorian, undefined), chord, role: 'horns', ref: 'key', voicing: 'close' });
     expect(safe).toEqual([74]);
     expect(creative).toEqual([76]);
+  });
+
+  it('resolves approach notes against the next bar\'s chord', () => {
+    const th = effectiveHarmony('safe', aDorian, undefined);
+    const ctx = {
+      harmony: th,
+      chord: { deg: 0, bars: 2 },
+      nextChord: { deg: 3, bars: 2 },
+      role: 'bass' as const,
+      ref: 'chord' as const,
+      voicing: 'close' as const,
+    };
+    // A semitone below the next root (D = MIDI 38) is C# = 37.
+    expect(resolveNote({ t: 12, d: 3, v: 1, s: 0, c: -1, nx: true }, ctx)).toEqual([37]);
+    // Without nx the same note follows the current chord (A = 33, minus a semitone).
+    expect(resolveNote({ t: 12, d: 3, v: 1, s: 0, c: -1 }, ctx)).toEqual([32]);
+  });
+
+  it('finds the chord of the next bar', () => {
+    expect(nextBarChord(aDorian.progression, 30).deg).toBe(3);
+    expect(nextBarChord(aDorian.progression, 12).deg).toBe(0);
+    expect(nextBarChord(aDorian.progression, 63).deg).toBe(0);
   });
 
   it('Wild mode keeps the part in its own key', () => {

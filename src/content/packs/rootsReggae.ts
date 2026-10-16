@@ -8,7 +8,10 @@ import { atBar, ch, grid, hit, makePatternFactory, n, rep } from '../dsl';
 
 const PACK = 'roots-reggae';
 const P = makePatternFactory({ packId: PACK, genre: 'Roots Reggae', bpm: 76 });
-const SW = 0.45; // shared lilt so every reggae part sits in the same pocket
+const SW = 0.45; // drums, organ and percussion lilt
+// Bass and guitar get less mechanical swing: their looseness comes from the
+// players' laid-back timing (engine/feel.ts), not from shifted 16ths.
+const SW_PLAY = 0.25;
 
 const triad = [0, 2, 4];
 
@@ -41,7 +44,24 @@ export const rootsReggae: GenrePack = {
       instrument: 'kit-roots',
       energy: 2,
       tags: ['one-drop'],
-      description: 'Kick and cross-stick together on beat 3 only, lilting hats.',
+      description: 'Kick and cross-stick together on beat 3 only; plain eighth-note hats that open on the last "and".',
+      hits: grid({
+        kick: '........X.......',
+        rim: '........X.......',
+        hatC: 'x.m.x.m.x.m.x...',
+        hatO: '..............m.',
+      }),
+    }),
+    P({
+      id: 'rr-drums-onedrop-lilt',
+      name: 'One Drop Lilt',
+      role: 'drums',
+      bars: 1,
+      swing: SW,
+      instrument: 'kit-roots',
+      energy: 2,
+      tags: ['one-drop'],
+      description: 'Busier, skipping 16th hats over the drop: a more decorated one drop.',
       hits: grid({
         kick: '........X.......',
         rim: '........X.......',
@@ -167,7 +187,7 @@ export const rootsReggae: GenrePack = {
       name: 'Deep Roots A',
       role: 'bass',
       bars: 2,
-      swing: SW,
+      swing: SW_PLAY,
       instrument: 'bass-dub',
       energy: 2,
       tags: ['roots'],
@@ -191,7 +211,7 @@ export const rootsReggae: GenrePack = {
       name: 'Deep Roots B',
       role: 'bass',
       bars: 2,
-      swing: SW,
+      swing: SW_PLAY,
       instrument: 'bass-dub',
       energy: 4,
       tags: ['roots', 'busy'],
@@ -221,7 +241,7 @@ export const rootsReggae: GenrePack = {
       name: 'Melodic Roots',
       role: 'bass',
       bars: 2,
-      swing: SW,
+      swing: SW_PLAY,
       instrument: 'bass-dub',
       energy: 3,
       tags: ['melodic'],
@@ -247,7 +267,7 @@ export const rootsReggae: GenrePack = {
       name: 'Sparse Dub Bass',
       role: 'bass',
       bars: 2,
-      swing: SW,
+      swing: SW_PLAY,
       instrument: 'bass-dub',
       energy: 1,
       tags: ['sparse', 'breakdown'],
@@ -255,13 +275,47 @@ export const rootsReggae: GenrePack = {
       notes: [n(2, 0, 9, 0.9), n(12, -3, 3, 0.7), n(18, 0, 6, 0.9), n(26, -1, 3, 0.75), n(30, -3, 2, 0.7)],
     }),
 
+    P({
+      id: 'rr-bass-classic',
+      name: 'Deep Roots Classic',
+      role: 'bass',
+      bars: 2,
+      swing: SW_PLAY,
+      instrument: 'bass-dub',
+      energy: 2,
+      tags: ['roots', 'sparse'],
+      description: 'Few notes, long and heavy: lands with the drop on 3 and leaves the vocal room.',
+      notes: [
+        n(2, 0, 3, 0.95),
+        n(7, 2, 1, 0.6),
+        n(8, 4, 3, 0.85),
+        n(14, -1, 1, 0.65),
+        n(18, 0, 4, 0.95),
+        n(24, -3, 3, 0.85),
+        n(30, -1, 1, 0.65),
+      ],
+    }),
+
     // ───────────── GUITAR ─────────────
+    P({
+      id: 'rr-gtr-double-skank',
+      name: 'Double Skank',
+      role: 'guitar',
+      bars: 1,
+      swing: SW_PLAY,
+      instrument: 'gtr-skank',
+      energy: 4,
+      voicing: 'close',
+      tags: ['rockers'],
+      description: 'Rockers-style chop on every eighth-note offbeat: twice the skank, more urgency.',
+      notes: [2, 6, 10, 14].map((t) => ch(t, triad, 0.45, t % 8 === 6 ? 0.85 : 0.65)),
+    }),
     P({
       id: 'rr-gtr-skank',
       name: 'Offbeat Skank',
       role: 'guitar',
       bars: 1,
-      swing: SW,
+      swing: SW_PLAY,
       instrument: 'gtr-skank',
       energy: 2,
       voicing: 'close',
@@ -273,7 +327,7 @@ export const rootsReggae: GenrePack = {
       name: 'Double Chop',
       role: 'guitar',
       bars: 1,
-      swing: SW,
+      swing: SW_PLAY,
       instrument: 'gtr-skank',
       energy: 3,
       voicing: 'close',
@@ -290,7 +344,7 @@ export const rootsReggae: GenrePack = {
       name: 'Muted Chops',
       role: 'guitar',
       bars: 1,
-      swing: SW,
+      swing: SW_PLAY,
       instrument: 'gtr-muted',
       energy: 3,
       voicing: 'close',
@@ -469,7 +523,7 @@ export const rootsReggae: GenrePack = {
       ],
       parts: {
         drums: 'rr-drums-onedrop-a',
-        bass: 'rr-bass-roots-a',
+        bass: 'rr-bass-classic',
         guitar: 'rr-gtr-skank',
         keys: 'rr-keys-bubble',
         horns: null,

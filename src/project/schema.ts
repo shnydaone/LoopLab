@@ -43,6 +43,7 @@ const pattern = z.object({
         s: z.union([z.number(), z.array(z.number()).max(8)]),
         o: z.number().optional(),
         c: z.number().optional(),
+        nx: z.boolean().optional(),
       }),
     )
     .optional(),
