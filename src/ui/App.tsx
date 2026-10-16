@@ -1,31 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { engine } from '@/engine/engine';
-import { saveNow } from '@/state/persistence';
+import { HelpCenter, WelcomePrompt } from '@/help/HelpCenter';
+import { HelpLayer } from '@/help/HelpLayer';
+import { useHelp } from '@/help/helpStore';
+import { saveManually } from '@/state/persistence';
 import { useStore } from '@/state/store';
-import { BottomPanel } from './BottomPanel';
-import { Browser } from './Browser';
-import { Deck } from './Deck';
-import { useMediaQuery, usePref } from './hooks';
-import { Inspector } from './Inspector';
-import { TopBar, type PanelId } from './TopBar';
-
-const SHORTCUTS: [string, string][] = [
-  ['Space', 'Play / stop'],
-  ['1 – 6', 'Select track'],
-  ['← / →', 'Previous / next part on the selected track'],
-  ['M / S / L', 'Mute / solo / lock selected track'],
-  ['V', 'Generate a variation of the selected part'],
-  ['F', 'Drum fill on the next bar'],
-  ['B / D', 'Build-up (2 bars, then drop) / Drop now'],
-  ['Wheel (+ Shift)', 'Turn a knob (fine steps with Shift)'],
-  ['R', 'Remix unlocked parts'],
-  ['Shift + S', 'Surprise Me'],
-  ['[ / ]', 'Energy down / up'],
-  ['Ctrl + Z / Ctrl + Shift + Z', 'Undo / redo'],
-  ['Ctrl + S', 'Save now'],
-  ['?', 'Show this help'],
-];
+import { useUi, type MobileTab } from '@/state/ui';
+import { TourOverlay } from '@/tour/TourOverlay';
+import { Dock } from './Dock';
+import { useMediaQuery } from './hooks';
+import { IconChevronLeft, IconChevronRight, IconChevronDown } from './icons';
+import { Library } from './Library';
+import { LiveMix } from './LiveMix';
+import { SoundLab } from './SoundLab';
+import { TopBar } from './TopBar';
 
 function isTyping(e: KeyboardEvent) {
   const el = e.target as HTMLElement | null;
@@ -34,40 +23,48 @@ function isTyping(e: KeyboardEvent) {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
 }
 
-function useShortcuts(onHelp: () => void) {
+/** Space / Enter on a focused button should press that button, not the transport. */
+function onControl(e: KeyboardEvent) {
+  const el = e.target as HTMLElement | null;
+  return !!el?.closest('button, a, [role="slider"], [role="tab"], [role="radio"], [role="menuitem"]');
+}
+
+function useShortcuts() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const s = useStore.getState();
       const mod = e.ctrlKey || e.metaKey;
       if (mod && e.key.toLowerCase() === 's') {
         e.preventDefault();
-        void saveNow();
+        void saveManually();
         return;
       }
-      if (mod && e.key.toLowerCase() === 'z') {
+      if (mod && e.key.toLowerCase() === 'z' && !isTyping(e)) {
         e.preventDefault();
         if (e.shiftKey) s.redo();
         else s.undo();
         return;
       }
-      if (mod && e.key.toLowerCase() === 'y') {
+      if (mod && e.key.toLowerCase() === 'y' && !isTyping(e)) {
         e.preventDefault();
         s.redo();
         return;
       }
-      if (mod || e.altKey || isTyping(e)) return;
-      const tracks = s.project.tracks;
+      if (mod || e.altKey || isTyping(e) || useHelp.getState().centerOpen) return;
       const sel = s.selectedTrackId;
       switch (e.key) {
         case ' ':
+          if (onControl(e)) return;
           e.preventDefault();
           void engine.toggle();
           break;
         case 'ArrowLeft':
+          if (onControl(e)) return;
           e.preventDefault();
           s.cyclePattern(sel, -1);
           break;
         case 'ArrowRight':
+          if (onControl(e)) return;
           e.preventDefault();
           s.cyclePattern(sel, 1);
           break;
@@ -112,18 +109,18 @@ function useShortcuts(onHelp: () => void) {
           s.evolveEnergy(1);
           break;
         case '?':
-          onHelp();
+          useHelp.getState().openCenter();
           break;
         default:
           if (/^[1-9]$/.test(e.key)) {
-            const t = tracks[Number(e.key) - 1];
+            const t = s.project.tracks[Number(e.key) - 1];
             if (t) s.selectTrack(t.id);
           }
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onHelp]);
+  }, []);
 }
 
 function Toasts() {
@@ -140,135 +137,121 @@ function Toasts() {
   );
 }
 
-function Help({ onClose }: { onClose: () => void }) {
-  useEffect(() => {
-    const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', k);
-    return () => window.removeEventListener('keydown', k);
-  }, [onClose]);
+function Overlays() {
   return (
-    <div className="modal-back" onClick={onClose}>
-      <div className="modal" role="dialog" aria-label="Keyboard shortcuts" onClick={(e) => e.stopPropagation()}>
-        <h2>Keyboard shortcuts</h2>
-        <dl className="shortcuts">
-          {SHORTCUTS.map(([k, d]) => (
-            <div key={k}>
-              <dt><kbd>{k}</kbd></dt>
-              <dd>{d}</dd>
-            </div>
-          ))}
-        </dl>
-        <button className="btn accent" onClick={onClose}>Got it</button>
-      </div>
-    </div>
+    <>
+      <Toasts />
+      <WelcomePrompt />
+      <TourOverlay />
+      <HelpCenter />
+      <HelpLayer />
+    </>
   );
 }
 
-type MobileTab = 'deck' | 'grooves' | 'mixer' | 'tools';
+const MOBILE_TABS: [MobileTab, string][] = [
+  ['deck', 'Live Mix'],
+  ['library', 'Library'],
+  ['lab', 'Sound Lab'],
+  ['mixer', 'Mixer'],
+];
 
 export function App() {
   const mobile = useMediaQuery('(max-width: 820px)');
-  const [panels, setPanels] = usePref<Record<PanelId, boolean>>('panels', { browser: true, inspector: true, bottom: true });
-  const [focus, setFocus] = usePref('focus', false);
-  const [scale, setScale] = usePref('ui-scale', 1);
-  const [help, setHelp] = useState(false);
-  const [tab, setTab] = useState<MobileTab>('deck');
-  useShortcuts(() => setHelp(true));
+  const panels = useUi((s) => s.panels);
+  const focus = useUi((s) => s.focus);
+  const scale = useUi((s) => s.scale);
+  const density = useUi((s) => s.density);
+  const mobileTab = useUi((s) => s.mobileTab);
+  const setUi = useUi((s) => s.set);
+  const togglePanel = useUi((s) => s.togglePanel);
+  useShortcuts();
 
   useEffect(() => {
     document.documentElement.style.setProperty('--ui-scale', String(scale));
-  }, [scale]);
-
-  const toggle = (p: PanelId) => setPanels({ ...panels, [p]: !panels[p] });
-  const show = (p: PanelId) => panels[p] && !focus;
+    document.documentElement.dataset.density = density;
+  }, [scale, density]);
 
   if (mobile) {
     return (
       <div className="app mobile">
-        <TopBar
-          compact
-          panels={panels}
-          onTogglePanel={toggle}
-          focus={focus}
-          onToggleFocus={() => setFocus(!focus)}
-          scale={scale}
-          onScale={setScale}
-          onHelp={() => setHelp(true)}
-        />
+        <TopBar compact />
         <main className="mobile-main">
-          {tab === 'deck' && <Deck />}
-          {tab === 'grooves' && <Browser />}
-          {tab === 'mixer' && <BottomPanel />}
-          {tab === 'tools' && <Inspector />}
+          {mobileTab === 'deck' && <LiveMix />}
+          {mobileTab === 'library' && <Library />}
+          {mobileTab === 'lab' && <SoundLab />}
+          {mobileTab === 'mixer' && <Dock />}
         </main>
-        <nav className="mobile-tabs" aria-label="Sections">
-          {(
-            [
-              ['deck', 'Deck'],
-              ['grooves', 'Grooves'],
-              ['mixer', 'Mixer'],
-              ['tools', 'Track'],
-            ] as [MobileTab, string][]
-          ).map(([id, label]) => (
-            <button key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>
+        <nav className="mobile-tabs" aria-label="Views">
+          {MOBILE_TABS.map(([id, label]) => (
+            <button key={id} className={mobileTab === id ? 'on' : ''} aria-current={mobileTab === id ? 'page' : undefined} onClick={() => setUi({ mobileTab: id })}>
               {label}
             </button>
           ))}
         </nav>
-        <Toasts />
-        {help && <Help onClose={() => setHelp(false)} />}
+        <Overlays />
       </div>
     );
   }
 
+  const show = (p: keyof typeof panels) => panels[p] && !focus;
+
   return (
     <div className="app">
-      <TopBar
-        panels={panels}
-        onTogglePanel={toggle}
-        focus={focus}
-        onToggleFocus={() => setFocus(!focus)}
-        scale={scale}
-        onScale={setScale}
-        onHelp={() => setHelp(true)}
-      />
+      <TopBar />
       <main className="workspace">
-        <PanelGroup direction="vertical" autoSaveId="looplab:v">
-          <Panel id="top" order={1} minSize={35}>
-            <PanelGroup direction="horizontal" autoSaveId="looplab:h">
-              {show('browser') && (
+        {!show('library') && (
+          <button className="rail rail-left" onClick={() => (focus ? setUi({ focus: false }) : togglePanel('library'))} aria-label="Show Groove Library">
+            <IconChevronRight size={16} />
+            <span>Groove Library</span>
+          </button>
+        )}
+        <PanelGroup direction="vertical" autoSaveId="looplab:v2" className="ws-v">
+          <Panel id="top" order={1} minSize={40}>
+            <PanelGroup direction="horizontal" autoSaveId="looplab:h2">
+              {show('library') && (
                 <>
-                  <Panel id="browser" order={1} defaultSize={19} minSize={12} maxSize={35}>
-                    <Browser />
+                  <Panel id="library" order={1} defaultSize={17} minSize={12} maxSize={30}>
+                    <Library />
                   </Panel>
                   <PanelResizeHandle className="resize-h" />
                 </>
               )}
-              <Panel id="deck" order={2} minSize={30}>
-                <Deck />
+              <Panel id="center" order={2} minSize={35}>
+                <LiveMix />
               </Panel>
-              {show('inspector') && (
+              {show('lab') && (
                 <>
                   <PanelResizeHandle className="resize-h" />
-                  <Panel id="inspector" order={3} defaultSize={20} minSize={13} maxSize={35}>
-                    <Inspector />
+                  <Panel id="lab" order={3} defaultSize={24} minSize={16} maxSize={38}>
+                    <SoundLab />
                   </Panel>
                 </>
               )}
             </PanelGroup>
           </Panel>
-          {show('bottom') && (
+          {show('dock') && (
             <>
               <PanelResizeHandle className="resize-v" />
-              <Panel id="bottom" order={2} defaultSize={30} minSize={16} maxSize={55}>
-                <BottomPanel />
+              <Panel id="dock" order={2} defaultSize={27} minSize={18} maxSize={50}>
+                <Dock />
               </Panel>
             </>
           )}
         </PanelGroup>
+        {!show('lab') && (
+          <button className="rail rail-right" onClick={() => (focus ? setUi({ focus: false }) : togglePanel('lab'))} aria-label="Show Sound Lab">
+            <IconChevronLeft size={16} />
+            <span>Sound Lab</span>
+          </button>
+        )}
       </main>
-      <Toasts />
-      {help && <Help onClose={() => setHelp(false)} />}
+      {!show('dock') && (
+        <button className="rail rail-bottom" onClick={() => (focus ? setUi({ focus: false }) : togglePanel('dock'))} aria-label="Show mixer and sections">
+          <IconChevronDown size={16} style={{ transform: 'rotate(180deg)' }} /> Mixer, sections and export
+        </button>
+      )}
+      <Overlays />
     </div>
   );
 }

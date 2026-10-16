@@ -25,7 +25,7 @@ function loop() {
 export function useMeter(ref: RefObject<HTMLElement | null>, trackId: string | 'master') {
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el || trackId === '__none__') return;
     const entry: MeterEntry = {
       el,
       read: () => (trackId === 'master' ? engine.masterLevel() : engine.trackLevel(trackId)),

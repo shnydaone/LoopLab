@@ -32,7 +32,10 @@ shell can't find them, refresh PATH from the registry first.
 | Project engine | `project/` | Types, zod schema + migrations, factory, IndexedDB storage |
 | App state | `state/store.ts` | Zustand project store = user intent, undo/redo, all musical actions |
 | Persistence | `state/persistence.ts` | Autosave (700 ms debounce), new/open/duplicate/delete/import/export |
-| UI workspace | `ui/` | TopBar, Browser, Deck (Live Mix), Inspector, BottomPanel (mixer/sections/scenes), App shell |
+| UI workspace | `ui/` | TopBar, Library, LiveMix (lanes / Pattern / FX Sends / Arrange), SoundLab, Dock (master, mixer, sections, scenes, export), App shell. `components.tsx` = Knob / VFader / Meter / Segmented; `icons.tsx`; `art/PackArt.tsx` |
+| Workspace state | `state/ui.ts` | Panels, tabs, density, scale, favourites (localStorage `looplab:ui`); never part of a project |
+| Help | `help/` | `content.ts` (HELP entries keyed by `data-help` id, glossary, shortcuts), `HelpLayer` (hover / focus / long-press tooltips, Learn mode), `HelpCenter` |
+| Guided tours | `tour/` | `tours.ts` (lesson scripts), `tourStore.ts` (progress, resume, practice projects, change detection), `TourOverlay` (spotlight + coach card) |
 
 ### Key design decisions
 
@@ -64,9 +67,16 @@ shell can't find them, refresh PATH from the registry first.
    (`SCHEMA_VERSION`); add a step to `MIGRATIONS` in `project/schema.ts` whenever the shape changes.
    Imports are always zod-validated. Workspace prefs (panel visibility, UI scale) are in
    localStorage; panel sizes persist via react-resizable-panels `autoSaveId`.
-8. **Layout.** Root font size follows viewport CSS width (`clamp(12px, 0.42vw + 7px, 22px)`) ×
-   user UI scale. The deck grid uses container queries: 6 columns ≥108rem (ultrawide),
-   3 ≥62rem, 2 ≥36rem. ≤820px switches to the phone layout with bottom tabs.
+8. **Layout.** Root font size follows viewport CSS width (`clamp(12px, 0.4vw + 7px, 22px)`) ×
+   user UI scale; everything is sized in rem. Desktop = Library | Live Mix | Sound Lab over the
+   Dock (react-resizable-panels, `autoSaveId` looplab:h2 / looplab:v2); hidden panels leave a
+   rail to reopen them. ≤820px switches to the phone layout with bottom tabs.
+9. **Help and tours.** Any element with `data-help="<id>"` gets a tooltip from `HELP[id]`; add an
+   entry whenever you add a control. Tour spotlights target `data-tour="<id>"`. Tour tasks are
+   detected from real state only: `useStore().events` counters (call `bump(name)` from new
+   actions a lesson should detect), a diff of the project (`seen` keys such as `volume:bass`,
+   `mute`, `pattern:drums`), and `liveStore`. Every lesson runs in its own practice project.
+   `?notour` suppresses the first-visit prompt (used for screenshots).
 
 ### Sample pipeline
 
@@ -138,7 +148,7 @@ scripts/samples/pitch.mjs      pitch detection used to verify bass note mapping
 - **Build/Drop** (engine): `queueBuild(bars)` starts on the next bar: master `macroHP` high-pass
   sweeps 20→900 Hz, the engine-owned FX box plays a riser of the exact build length, drums play
   `buildRollPattern()` (8ths→16ths→32nds crescendo); at the end (or `queueDrop()`) the filter
-  snaps open with an impact + crash on the downbeat. UI: Build/Drop pads, Inspector buttons, B / D keys.
+  snaps open with an impact + crash on the downbeat. UI: Build/Drop pads in the Dock, Sound Lab global buttons, B / D keys.
 - **Density** (`music/density.ts`): per-track 0..1; events below an importance threshold
   (velocity + on-beat bonus) are skipped, so ghosts go first. **Resonance**: per-track filter Q.
   Both live in project schema v2 (migration 1→2 in `schema.ts`).

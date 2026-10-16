@@ -5,12 +5,12 @@ import type { Project, TrackState } from './types';
 import { SCHEMA_VERSION } from './types';
 
 export const ROLE_META: Record<Role, { name: string; color: string; icon: string }> = {
-  drums: { name: 'Drums', color: '#ff7a45', icon: '◉' },
-  bass: { name: 'Bass', color: '#ffc53d', icon: '◢' },
-  guitar: { name: 'Guitar / Pad', color: '#3df5c4', icon: '≋' },
-  keys: { name: 'Keys', color: '#8ea2ff', icon: '▤' },
-  horns: { name: 'Horns / Lead', color: '#ff5fa2', icon: '◣' },
-  perc: { name: 'Perc / FX', color: '#b37bff', icon: '✦' },
+  drums: { name: 'Drums', color: '#ff5468', icon: '◉' },
+  bass: { name: 'Bass', color: '#ffb02e', icon: '◢' },
+  guitar: { name: 'Guitar / Pad', color: '#3ddc84', icon: '≋' },
+  keys: { name: 'Keys', color: '#4c9dff', icon: '▤' },
+  horns: { name: 'Horns / Lead', color: '#a970ff', icon: '◣' },
+  perc: { name: 'Perc / FX', color: '#2fd3e6', icon: '✦' },
 };
 
 const DEFAULT_FX: Record<Role, TrackState['fx']> = {
