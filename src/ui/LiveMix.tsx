@@ -4,15 +4,15 @@ import { presetById } from '@/engine/instruments/presetInfo';
 import { useLive } from '@/engine/live';
 import { feelLabel } from '@/music/compat';
 import { chordIndexAt, chordName, keyName } from '@/music/theory';
-import type { Role } from '@/music/types';
-import { ROLE_META } from '@/project/factory';
+import { ROLES, type Role } from '@/music/types';
+import { MAX_TRACKS, ROLE_META } from '@/project/factory';
 import { QUANTIZE_STEPS, type Quantize, type TrackState } from '@/project/types';
 import { lookupPattern, useStore } from '@/state/store';
 import { useUi, type CenterTab } from '@/state/ui';
 import { PackArt } from './art/PackArt';
 import { ClipVisual } from './ClipVisual';
 import { EnergyDots, faderDb, Knob } from './components';
-import { IconBass, IconDoubleLeft, IconDrums, IconFx, IconGuitar, IconHorn, IconKeys, IconLock, IconMore, IconSparkle } from './icons';
+import { IconBass, IconDoubleLeft, IconDrums, IconFx, IconGuitar, IconHorn, IconKeys, IconLock, IconMore, IconPlus, IconSparkle } from './icons';
 import { useDismiss } from './ProjectMenu';
 import { History } from './Dock';
 
@@ -82,7 +82,7 @@ function SwapMenu({ t, onClose }: { t: TrackState; onClose: () => void }) {
     byPack.get(key)!.push(p);
   }
   return (
-    <div className="popover swap-menu" role="menu" aria-label={`Choose a ${ROLE_META[t.role].name} part`}>
+    <div className="popover swap-menu" role="menu" aria-label={`Choose a part for ${t.name}`}>
       <div className="swap-head">
         Choose a part <small>It starts on the next {project.quantize === 'beat' ? 'beat' : 'bar'}</small>
       </div>
@@ -107,7 +107,7 @@ function SwapMenu({ t, onClose }: { t: TrackState; onClose: () => void }) {
   );
 }
 
-function MoreMenu({ t, onClose }: { t: TrackState; onClose: () => void }) {
+function MoreMenu({ t, index, count, onClose }: { t: TrackState; index: number; count: number; onClose: () => void }) {
   const project = useStore((s) => s.project);
   const s = useStore.getState();
   const setUi = useUi((x) => x.set);
@@ -123,11 +123,37 @@ function MoreMenu({ t, onClose }: { t: TrackState; onClose: () => void }) {
       <button role="menuitem" onClick={act(() => s.toggleLock(t.id))} data-help="lock">{t.locked ? 'Unlock track' : 'Lock track'}</button>
       <button role="menuitem" onClick={act(() => (t.patternId ? s.setTrackPattern(t.id, null) : s.cyclePattern(t.id, 1)))}>{t.patternId ? 'Remove part (silence)' : 'Add a part'}</button>
       <button role="menuitem" onClick={act(() => { s.selectTrack(t.id); setUi({ labTab: 'instrument' }); })} data-help="instrument">Change instrument sound…</button>
+      <hr />
+      <div className="menu-label" data-help="track-type">Change track type</div>
+      <div className="type-grid" role="group" aria-label="Track type">
+        {ROLES.map((r) => {
+          const Icon = ROLE_ICON[r];
+          return (
+            <button key={r} role="menuitemradio" aria-checked={r === t.role} className={r === t.role ? 'on' : ''} style={{ ['--role' as string]: ROLE_META[r].color }} disabled={r === t.role} onClick={act(() => s.setTrackRole(t.id, r))} data-help="track-type">
+              <Icon size={14} /> {ROLE_META[r].name}
+            </button>
+          );
+        })}
+      </div>
+      <hr />
+      <button
+        role="menuitem"
+        data-help="rename-track"
+        onClick={act(() => {
+          const name = window.prompt('Rename track', t.name);
+          if (name !== null) s.renameTrack(t.id, name);
+        })}
+      >
+        Rename track…
+      </button>
+      <button role="menuitem" disabled={index === 0} onClick={act(() => s.moveTrack(t.id, -1))} data-help="move-track">Move up</button>
+      <button role="menuitem" disabled={index === count - 1} onClick={act(() => s.moveTrack(t.id, 1))} data-help="move-track">Move down</button>
+      <button role="menuitem" className="danger" disabled={count <= 1} onClick={act(() => s.removeTrack(t.id))} data-help="remove-track">Remove track</button>
     </div>
   );
 }
 
-function TrackLane({ t, index }: { t: TrackState; index: number }) {
+function TrackLane({ t, index, count }: { t: TrackState; index: number; count: number }) {
   const project = useStore((s) => s.project);
   const selected = useStore((s) => s.selectedTrackId === t.id);
   const lt = useLive((s) => s.tracks[t.id]);
@@ -166,7 +192,7 @@ function TrackLane({ t, index }: { t: TrackState; index: number }) {
       style={{ ['--role' as string]: meta.color }}
       onClick={() => s.selectTrack(t.id)}
       role="group"
-      aria-label={`${meta.name} track`}
+      aria-label={`${t.name} track`}
       data-tour={`lane-${t.role}`}
       data-help="track"
     >
@@ -177,8 +203,11 @@ function TrackLane({ t, index }: { t: TrackState; index: number }) {
         <Icon size={22} />
       </div>
       <div className="lane-title">
-        <div className="lane-name">{meta.name}</div>
-        <div className="lane-inst">{inst ?? 'No instrument'}</div>
+        <div className="lane-name">{t.name}</div>
+        <div className="lane-inst">
+          {t.name.startsWith(meta.name) ? '' : `${meta.name} · `}
+          {inst ?? 'No instrument'}
+        </div>
         {t.locked && (
           <div className="lane-lock" data-help="lock">
             <IconLock size={12} /> locked
@@ -186,12 +215,12 @@ function TrackLane({ t, index }: { t: TrackState; index: number }) {
         )}
       </div>
       <div className="lane-ms" onClick={(e) => e.stopPropagation()}>
-        <button className={`ms mute ${t.mute ? 'on' : ''}`} aria-pressed={t.mute} aria-label={`Mute ${meta.name}`} data-help="mute" data-tour={`mute-${t.role}`} onClick={() => s.toggleMute(t.id)}>M</button>
-        <button className={`ms solo ${t.solo ? 'on' : ''}`} aria-pressed={t.solo} aria-label={`Solo ${meta.name}`} data-help="solo" data-tour={`solo-${t.role}`} onClick={() => s.toggleSolo(t.id)}>S</button>
+        <button className={`ms mute ${t.mute ? 'on' : ''}`} aria-pressed={t.mute} aria-label={`Mute ${t.name}`} data-help="mute" data-tour={`mute-${t.role}`} onClick={() => s.toggleMute(t.id)}>M</button>
+        <button className={`ms solo ${t.solo ? 'on' : ''}`} aria-pressed={t.solo} aria-label={`Solo ${t.name}`} data-help="solo" data-tour={`solo-${t.role}`} onClick={() => s.toggleSolo(t.id)}>S</button>
       </div>
       <div className="lane-knob" onClick={(e) => e.stopPropagation()}>
         <Knob
-          label={`${meta.name} volume`}
+          label={`${t.name} volume`}
           hideLabel
           size="sm"
           value={t.volume}
@@ -225,7 +254,7 @@ function TrackLane({ t, index }: { t: TrackState; index: number }) {
         {pack ? <PackArt packId={pack.id} /> : <div className="art-empty" />}
       </div>
       <div className="lane-actions" onClick={(e) => e.stopPropagation()}>
-        <button className="ibtn" aria-label={`Previous ${meta.name} part`} data-help="prev-part" onClick={() => s.cyclePattern(t.id, -1)}>
+        <button className="ibtn" aria-label={`Previous ${t.name} part`} data-help="prev-part" onClick={() => s.cyclePattern(t.id, -1)}>
           <IconDoubleLeft size={16} />
         </button>
         <div className="menu-wrap" ref={swap.ref}>
@@ -239,16 +268,46 @@ function TrackLane({ t, index }: { t: TrackState; index: number }) {
           )}
         </div>
         <div className="menu-wrap" ref={more.ref}>
-          <button className="ibtn" aria-label={`More ${meta.name} options`} aria-haspopup="menu" aria-expanded={more.open} data-help="track-more" onClick={() => more.setOpen(!more.open)}>
+          <button className="ibtn" aria-label={`More ${t.name} options`} aria-haspopup="menu" aria-expanded={more.open} data-help="track-more" onClick={() => more.setOpen(!more.open)}>
             <IconMore size={16} />
           </button>
           {more.open && (
             <div className="dropdown-anchor" style={more.style}>
-              <MoreMenu t={t} onClose={() => more.setOpen(false)} />
+              <MoreMenu t={t} index={index} count={count} onClose={() => more.setOpen(false)} />
             </div>
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function AddTrack({ count }: { count: number }) {
+  const dd = useDropdown();
+  const addTrack = useStore((s) => s.addTrack);
+  const full = count >= MAX_TRACKS;
+  return (
+    <div className="add-track menu-wrap" ref={dd.ref}>
+      <button className="add-track-btn" onClick={() => dd.setOpen(!dd.open)} aria-haspopup="menu" aria-expanded={dd.open} disabled={full} data-help="add-track" data-tour="add-track">
+        <IconPlus size={16} /> {full ? `Track limit reached (${MAX_TRACKS})` : 'Add track'}
+      </button>
+      {dd.open && (
+        <div className="dropdown-anchor" style={dd.style}>
+          <div className="popover menu add-menu" role="menu" aria-label="Add a track">
+            <div className="menu-label">What kind of track?</div>
+            <div className="type-grid">
+              {ROLES.map((r) => {
+                const Icon = ROLE_ICON[r];
+                return (
+                  <button key={r} role="menuitem" style={{ ['--role' as string]: ROLE_META[r].color }} onClick={() => { addTrack(r); dd.setOpen(false); }}>
+                    <Icon size={14} /> {ROLE_META[r].name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -295,7 +354,7 @@ function PatternView() {
   return (
     <div className="pattern-view" style={{ ['--role' as string]: meta.color }}>
       <div className="pv-head">
-        <h3>{meta.name}: {p?.name ?? 'Silent'}</h3>
+        <h3>{t.name}: {p?.name ?? 'Silent'}</h3>
         {p && <p className="muted">{p.genre} · {p.bars} bar{p.bars > 1 ? 's' : ''} · written at {p.bpm} BPM · swing {Math.round(p.swing * 100)}% · {p.description}</p>}
       </div>
       <div className="pv-big clip">
@@ -323,7 +382,7 @@ function SendsView() {
         const meta = ROLE_META[t.role];
         return (
           <div key={t.id} className="send-row" style={{ ['--role' as string]: meta.color }}>
-            <span className="send-name">{meta.name}</span>
+            <span className="send-name">{t.name}</span>
             <Knob label="Reverb" size="sm" value={t.fx.reverb} color={meta.color} format={pct} defaultValue={0} onChange={(v) => setFx(t.id, { reverb: v })} help="reverb" />
             <Knob label="Dub echo" size="sm" value={t.fx.delay} color={meta.color} format={pct} defaultValue={0} onChange={(v) => setFx(t.id, { delay: v })} help="delay" />
             <Knob label="Filter" size="sm" value={t.fx.filter} color={meta.color} format={(v) => (v > 0.995 ? 'Open' : pct(v))} defaultValue={1} onChange={(v) => setFx(t.id, { filter: v })} help="filter" />
@@ -386,8 +445,9 @@ export function LiveMix() {
       {tab === 'live' && (
         <div className="lanes" data-tour="lanes" data-help="live-mix">
           {tracks.map((t, i) => (
-            <TrackLane key={t.id} t={t} index={i} />
+            <TrackLane key={t.id} t={t} index={i} count={tracks.length} />
           ))}
+          <AddTrack count={tracks.length} />
         </div>
       )}
       {tab === 'pattern' && <PatternView />}

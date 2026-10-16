@@ -34,13 +34,13 @@ function Strip({ t }: { t: TrackState }) {
   const meta = ROLE_META[t.role];
   return (
     <div className={`strip ${selected ? 'selected' : ''} ${t.mute ? 'muted' : ''}`} style={{ ['--role' as string]: meta.color }}>
-      <Knob label={`${meta.name} pan`} hideLabel size="xs" value={t.pan} min={-1} max={1} defaultValue={0} bipolar color={meta.color} format={panFmt} onChange={(v) => setTrack(t.id, { pan: v }, true)} help="pan" />
-      <VFader label={`${meta.name} level`} value={t.volume} color={meta.color} onChange={(v) => setTrack(t.id, { volume: v }, true)} help="volume" meterId={t.id} />
+      <Knob label={`${t.name} pan`} hideLabel size="xs" value={t.pan} min={-1} max={1} defaultValue={0} bipolar color={meta.color} format={panFmt} onChange={(v) => setTrack(t.id, { pan: v }, true)} help="pan" />
+      <VFader label={`${t.name} level`} value={t.volume} color={meta.color} onChange={(v) => setTrack(t.id, { volume: v }, true)} help="volume" meterId={t.id} />
       <div className="strip-btns">
-        <button className={`ms mute ${t.mute ? 'on' : ''}`} aria-pressed={t.mute} aria-label={`Mute ${meta.name}`} data-help="mute" onClick={() => toggleMute(t.id)}>M</button>
-        <button className={`ms solo ${t.solo ? 'on' : ''}`} aria-pressed={t.solo} aria-label={`Solo ${meta.name}`} data-help="solo" onClick={() => toggleSolo(t.id)}>S</button>
+        <button className={`ms mute ${t.mute ? 'on' : ''}`} aria-pressed={t.mute} aria-label={`Mute ${t.name}`} data-help="mute" onClick={() => toggleMute(t.id)}>M</button>
+        <button className={`ms solo ${t.solo ? 'on' : ''}`} aria-pressed={t.solo} aria-label={`Solo ${t.name}`} data-help="solo" onClick={() => toggleSolo(t.id)}>S</button>
       </div>
-      <button className="strip-name" onClick={() => selectTrack(t.id)}>{meta.name}</button>
+      <button className="strip-name" onClick={() => selectTrack(t.id)}>{t.name}</button>
     </div>
   );
 }

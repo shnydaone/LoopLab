@@ -18,7 +18,8 @@ export interface GrooveResult {
   sectionId: string;
   bpm: number;
   harmony: Harmony;
-  picks: Record<Role, string | null>;
+  /** One pick per input track, in the same order. */
+  picks: (string | null)[];
 }
 
 const SECTION_ENERGY: Record<string, number> = {
@@ -40,9 +41,11 @@ function choosePattern(
   rng: ReturnType<typeof makeRng>,
   user: Pattern[],
   crossBias: number,
-  exclude?: string | null,
+  exclude: Set<string | null> = new Set(),
 ): Pattern | null {
-  const pool = patternsForRole(role, user).filter((p) => !p.tags.includes('fill') && p.id !== exclude);
+  let pool = patternsForRole(role, user).filter((p) => !p.tags.includes('fill') && !exclude.has(p.id));
+  // Several tracks of one type should play different parts, unless nothing else is left.
+  if (pool.length === 0) pool = patternsForRole(role, user).filter((p) => !p.tags.includes('fill'));
   if (pool.length === 0) return null;
   const sameBoost = compat === 'safe' ? 3 : compat === 'creative' ? 1.6 : 1;
   return rng.weighted(pool, (p) => {
@@ -51,6 +54,18 @@ function choosePattern(
     const breakdownPenalty = energy > 2.5 && p.tags.includes('breakdown') ? 0.25 : 1;
     return affinity * fit * breakdownPenalty;
   });
+}
+
+/** Parts already taken by locked tracks of each type, extended as picks are made. */
+function usedByRole(tracks: TrackPick[]) {
+  const sets = new Map<Role, Set<string | null>>();
+  for (const t of tracks) if (t.locked) get(t.role).add(t.patternId);
+  function get(role: Role) {
+    let s = sets.get(role);
+    if (!s) sets.set(role, (s = new Set()));
+    return s;
+  }
+  return get;
 }
 
 export function surprise(
@@ -64,18 +79,21 @@ export function surprise(
   const sections = pack.sections.filter((s) => s.kind !== 'outro');
   const section: SectionDef = rng.weighted(sections, (s) => (s.kind === 'verse' || s.kind === 'chorus' ? 3 : 1));
   const energy = SECTION_ENERGY[section.kind] ?? 3;
-  const picks = {} as Record<Role, string | null>;
+  const picks: (string | null)[] = [];
+  const used = usedByRole(tracks);
   for (const t of tracks) {
     if (t.locked) {
-      picks[t.role] = t.patternId;
+      picks.push(t.patternId);
       continue;
     }
     const silence = OPTIONAL_ROLE_SILENCE[t.role] ?? 0;
     if (rng.chance(silence * (energy < 3 ? 1.5 : 0.7))) {
-      picks[t.role] = null;
+      picks.push(null);
       continue;
     }
-    picks[t.role] = choosePattern(t.role, pack, energy, compat, rng, user, 1.2)?.id ?? null;
+    const id = choosePattern(t.role, pack, energy, compat, rng, user, 1.2, used(t.role))?.id ?? null;
+    used(t.role).add(id);
+    picks.push(id);
   }
   const jitter = compat === 'safe' ? 0 : rng.int(-4, 4);
   return {
@@ -94,17 +112,20 @@ export function remix(
   basePackId: string,
   compat: CompatMode,
   user: Pattern[] = [],
-): Record<Role, string | null> {
+): (string | null)[] {
   const rng = makeRng(seed);
   const pack = getPack(basePackId) ?? PACKS[0];
-  const picks = {} as Record<Role, string | null>;
+  const picks: (string | null)[] = [];
+  const used = usedByRole(tracks);
   for (const t of tracks) {
     if (t.locked) {
-      picks[t.role] = t.patternId;
+      picks.push(t.patternId);
       continue;
     }
     const energy = 2.5 + rng.next() * 2;
-    picks[t.role] = choosePattern(t.role, pack, energy, compat, rng, user, 2, t.patternId)?.id ?? t.patternId;
+    const id = choosePattern(t.role, pack, energy, compat, rng, user, 2, new Set([...used(t.role), t.patternId]))?.id ?? t.patternId;
+    used(t.role).add(id);
+    picks.push(id);
   }
   return picks;
 }
@@ -117,32 +138,31 @@ export function evolve(
   direction: 1 | -1,
   lookup: (id: string) => Pattern | undefined,
   user: Pattern[] = [],
-): Record<Role, string | null> {
+): (string | null)[] {
   const rng = makeRng(seed);
   const pack = getPack(basePackId) ?? PACKS[0];
-  const picks = {} as Record<Role, string | null>;
-  for (const t of tracks) {
-    picks[t.role] = t.patternId;
-    if (t.locked) continue;
+  const picks: (string | null)[] = tracks.map((t) => t.patternId);
+  tracks.forEach((t, i) => {
+    if (t.locked) return;
     const cur = t.patternId ? lookup(t.patternId) : undefined;
     if (!cur) {
       if (direction > 0 && rng.chance(0.6)) {
         const pool = patternsForRole(t.role, user).filter((p) => p.packId === pack.id && p.energy <= 3);
-        if (pool.length) picks[t.role] = rng.pick(pool).id;
+        if (pool.length) picks[i] = rng.pick(pool).id;
       }
-      continue;
+      return;
     }
     const target = cur.energy + direction;
     if (direction < 0 && cur.energy <= 1 && (t.role === 'horns' || t.role === 'perc' || t.role === 'keys')) {
-      picks[t.role] = null;
-      continue;
+      picks[i] = null;
+      return;
     }
     const pool = patternsForRole(t.role, user).filter(
       (p) => p.id !== cur.id && (direction > 0 ? p.energy > cur.energy : p.energy < cur.energy),
     );
-    if (pool.length === 0) continue;
+    if (pool.length === 0) return;
     const pick = rng.weighted(pool, (p) => (p.packId === cur.packId ? 2.5 : 1) / (1 + Math.abs(p.energy - target)));
-    picks[t.role] = pick.id;
-  }
+    picks[i] = pick.id;
+  });
   return picks;
 }

@@ -77,6 +77,11 @@ shell can't find them, refresh PATH from the registry first.
    actions a lesson should detect), a diff of the project (`seen` keys such as `volume:bass`,
    `mute`, `pattern:drums`), and `liveStore`. Every lesson runs in its own practice project.
    `?notour` suppresses the first-visit prompt (used for screenshots).
+10. **Flexible tracks.** A project holds 1–12 tracks (`MAX_TRACKS`); several tracks may share a
+    role ("Drums 2"). Never key per-track data by role: generators return one pick per track
+    (array, same order as `project.tracks`), and `sectionPicks()` gives extra tracks of a role a
+    different part from the same pack. Changing a track's type replaces it with a new track id so
+    the engine rebuilds its routing (drum bus, low-cut). Display `t.name`, colour by role.
 
 ### Sample pipeline
 

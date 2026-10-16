@@ -84,8 +84,68 @@ describe('Surprise Me', () => {
     const tracks = createProject().tracks.map((t) => ({ role: t.role, locked: false, patternId: t.patternId }));
     for (let seed = 1; seed < 40; seed++) {
       const r = surprise(seed, tracks, 'safe');
-      expect(r.picks.drums).toBeTruthy();
-      expect(r.picks.bass).toBeTruthy();
+      expect(r.picks[tracks.findIndex((t) => t.role === 'drums')]).toBeTruthy();
+      expect(r.picks[tracks.findIndex((t) => t.role === 'bass')]).toBeTruthy();
+    }
+  });
+});
+
+describe('flexible tracks', () => {
+  const drums = () => s().project.tracks.filter((t) => t.role === 'drums');
+
+  it('adds a second track of a type with its own name and a different part', () => {
+    s().addTrack('drums');
+    const [a, b] = drums();
+    expect(s().project.tracks).toHaveLength(7);
+    expect(b.name).toBe('Drums 2');
+    expect(b.patternId).toBeTruthy();
+    expect(b.patternId).not.toBe(a.patternId);
+    expect(s().selectedTrackId).toBe(b.id);
+  });
+
+  it('gives extra tracks of a type a different part when a groove or section loads', () => {
+    s().addTrack('drums');
+    s().loadGroove('two-tone-ska');
+    const [a, b] = drums();
+    expect(a.patternId).not.toBe(b.patternId);
+    expect(b.patternId?.startsWith('tt-')).toBe(true);
+    s().launchSection('two-tone-ska', 'chorus');
+    expect(drums()[0].patternId).not.toBe(drums()[1].patternId);
+  });
+
+  it('changes a track to another type in place, and undo brings it back', () => {
+    const before = s().project.tracks.map((t) => t.role);
+    s().selectTrack('trk-horns');
+    s().setTrackRole('trk-horns', 'drums');
+    const t = s().project.tracks[4];
+    expect(t.role).toBe('drums');
+    expect(t.name).toBe('Drums 2');
+    expect(t.id).not.toBe('trk-horns');
+    expect(s().selectedTrackId).toBe(t.id);
+    s().undo();
+    expect(s().project.tracks.map((x) => x.role)).toEqual(before);
+  });
+
+  it('removes and reorders tracks but never removes the last one', () => {
+    s().moveTrack('trk-bass', -1);
+    expect(s().project.tracks[0].id).toBe('trk-bass');
+    for (const t of [...s().project.tracks]) s().removeTrack(t.id);
+    expect(s().project.tracks).toHaveLength(1);
+  });
+
+  it('stops at the track limit', () => {
+    for (let i = 0; i < 10; i++) s().addTrack('perc');
+    expect(s().project.tracks).toHaveLength(12);
+  });
+
+  it('lets Surprise Me pick different parts for two tracks of one type', () => {
+    s().addTrack('drums');
+    const tracks = s().project.tracks.map((t) => ({ role: t.role, locked: false, patternId: t.patternId }));
+    const idx = tracks.flatMap((t, i) => (t.role === 'drums' ? [i] : []));
+    for (let seed = 1; seed < 30; seed++) {
+      const r = surprise(seed, tracks, 'wild');
+      expect(r.picks).toHaveLength(tracks.length);
+      expect(r.picks[idx[0]]).not.toBe(r.picks[idx[1]]);
     }
   });
 });

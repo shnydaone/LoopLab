@@ -147,7 +147,7 @@ function VariationTab() {
         </button>
         <button className="btn" disabled={!p?.sourceId} onClick={() => revertTrack(t.id)}>↺ Original</button>
         <button className="btn" onClick={() => toggleLock(t.id)} data-help="lock" aria-pressed={t.locked}>
-          {t.locked ? <IconUnlock size={16} /> : <IconLock size={16} />} {t.locked ? 'Unlock' : 'Lock'} {ROLE_META[t.role].name}
+          {t.locked ? <IconUnlock size={16} /> : <IconLock size={16} />} {t.locked ? 'Unlock' : 'Lock'} {t.name}
         </button>
         <button className="btn" onClick={remixParts} data-help="remix" data-tour="remix-btn">Remix unlocked parts</button>
       </div>
@@ -232,7 +232,7 @@ export function SoundLab() {
                 <span className="lane-icon small" aria-hidden>
                   <Icon size={16} />
                 </span>
-                {meta.name}
+                {t.name}
               </div>
               <div className="lab-hero-inst">{inst?.name ?? 'No instrument'}</div>
               <div className="lab-hero-part">{p ? `${p.name} · ${getPack(p.packId)?.name ?? p.genre}` : 'Silent'}</div>
@@ -241,7 +241,7 @@ export function SoundLab() {
           <div className="lab-track-pick" role="group" aria-label="Choose track to edit">
             {project.tracks.map((x) => (
               <button key={x.id} className={x.id === t.id ? 'on' : ''} style={{ ['--role' as string]: ROLE_META[x.role].color }} onClick={() => useStore.getState().selectTrack(x.id)} aria-pressed={x.id === t.id}>
-                {ROLE_META[x.role].name}
+                {x.name}
               </button>
             ))}
           </div>

@@ -28,14 +28,17 @@ const DEFAULT_VOL: Record<Role, number> = { drums: 0.8, bass: 0.8, guitar: 0.72,
 export const uid = (prefix = 'id') =>
   `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
-export function defaultTracks(pack: GenrePack, sectionId = 'verse'): TrackState[] {
-  const section = pack.sections.find((s) => s.id === sectionId) ?? pack.sections[0];
-  return ROLES.map((role) => ({
-    id: `trk-${role}`,
+/** Most tracks a project can hold (keeps the mixer and CPU load sensible). */
+export const MAX_TRACKS = 12;
+
+/** A fresh track of the given type with that type's default mix settings. */
+export function makeTrack(role: Role, patternId: string | null, opts: { id?: string; name?: string } = {}): TrackState {
+  return {
+    id: opts.id ?? uid('trk'),
     role,
-    name: ROLE_META[role].name,
+    name: opts.name ?? ROLE_META[role].name,
     color: ROLE_META[role].color,
-    patternId: section?.parts[role] ?? null,
+    patternId,
     instrument: null,
     volume: DEFAULT_VOL[role],
     pan: DEFAULT_PAN[role],
@@ -44,7 +47,20 @@ export function defaultTracks(pack: GenrePack, sectionId = 'verse'): TrackState[
     locked: false,
     density: 1,
     fx: { ...DEFAULT_FX[role] },
-  }));
+  };
+}
+
+/** "Drums", then "Drums 2", "Drums 3"… for further tracks of the same type. */
+export function trackName(role: Role, tracks: TrackState[]): string {
+  const base = ROLE_META[role].name;
+  const names = new Set(tracks.map((t) => t.name));
+  if (!names.has(base)) return base;
+  for (let n = 2; ; n++) if (!names.has(`${base} ${n}`)) return `${base} ${n}`;
+}
+
+export function defaultTracks(pack: GenrePack, sectionId = 'verse'): TrackState[] {
+  const section = pack.sections.find((s) => s.id === sectionId) ?? pack.sections[0];
+  return ROLES.map((role) => makeTrack(role, section?.parts[role] ?? null, { id: `trk-${role}` }));
 }
 
 export function createProject(packId = PACKS[0].id, name = 'Untitled Jam'): Project {
